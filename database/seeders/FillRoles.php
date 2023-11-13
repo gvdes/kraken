@@ -26,7 +26,6 @@ class FillRoles extends Seeder
                 [ "id"=>6, "name"=>"Compras", "description"=>"", "type_rol"=>1, "hierarchy"=>3 ],
                 [ "id"=>7, "name"=>"RRHH (lead)", "description"=>"", "type_rol"=>1, "hierarchy"=>2 ],
                 [ "id"=>8, "name"=>"RRHH", "description"=>"", "type_rol"=>1, "hierarchy"=>3 ],
-
                 [ "id"=>9, "name"=>"Gerente de Sucursal", "description"=>"", "type_rol"=>2, "hierarchy"=>2 ],
                 [ "id"=>10, "name"=>"Subgerente", "description"=>"", "type_rol"=>2, "hierarchy"=>3 ],
                 [ "id"=>11, "name"=>"Almacenista (lead)", "description"=>"", "type_rol"=>2, "hierarchy"=>4 ],

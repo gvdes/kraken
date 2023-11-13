@@ -25,19 +25,19 @@ class FAD_Auditors extends Seeder
         ### usuarios root y super admins
         ### Todos los modulos con el permiso 1, elimina todas las relaciones entre roots y permisos
         $leads = [
-            [ "_rol"=>3, "_permission"=>2, "_module"=>"100.0" ], // Usuarios
-            [ "_rol"=>3, "_permission"=>3, "_module"=>"102.0" ], // Almacenes
-            [ "_rol"=>3, "_permission"=>1, "_module"=>"111.0" ], // Auditoria
+            [ "_rol"=>5, "_permission"=>1, "_module"=>"4f36" ], // Usuarios
+            [ "_rol"=>5, "_permission"=>1, "_module"=>"b599" ], // Almacenes
+            // [ "_rol"=>5, "_permission"=>1, "_module"=>"" ], // Auditoria
         ];
 
         $operatives = [
-            [ "_rol"=>4, "_permission"=>3, "_module"=>"100.0" ], // Usuarios
-            [ "_rol"=>4, "_permission"=>3, "_module"=>"102.0" ], // Almacenes
-            [ "_rol"=>4, "_permission"=>2, "_module"=>"111.0" ], // Auditoria
+            [ "_rol"=>6, "_permission"=>2, "_module"=>"4f36" ], // Usuarios
+            [ "_rol"=>6, "_permission"=>2, "_module"=>"b599" ], // Almacenes
+            // [ "_rol"=>6, "_permission"=>2, "_module"=>"111.0" ], // Auditoria
         ];
 
         echo "Eliminando permisos default a Aditores (3 y 4) ...\n"; sleep(1);
-        $auths_dels = DB::table("role_default_permissions")->whereIn("_rol",[3,4])->delete();
+        $auths_dels = DB::table("role_default_permissions")->whereIn("_rol",[5,6])->delete();
 
         foreach($leads as $mod){
             $ins = DB::table("role_default_permissions")->insert($mod);

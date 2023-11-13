@@ -24,57 +24,35 @@ class FAD_AdminsStores extends Seeder
 
         ### modulos Gerentes (9)
         $leads = [
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"1.0" ],
-            [ "_rol"=>9, "_permission"=>2, "_module"=>"1.1" ],
+            [ "_rol"=>9, "_permission"=>1, "_module"=>"284c" ],//etiquetadora
+            [ "_rol"=>9, "_permission"=>2, "_module"=>"4a82" ],//presupuestos
 
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"2.0" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"2.1" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"2.2" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"2.3" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"2.4" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"2.5" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"2.6" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"2.7" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"2.8" ],
+            [ "_rol"=>9, "_permission"=>2, "_module"=>"4bed" ],//preventa
+            [ "_rol"=>9, "_permission"=>2, "_module"=>"9b4e" ],//checkin
+            [ "_rol"=>9, "_permission"=>1, "_module"=>"9ecc" ],//ubicador
+            [ "_rol"=>9, "_permission"=>2, "_module"=>"a313" ],//cajas
+            [ "_rol"=>9, "_permission"=>3, "_module"=>"b599" ],//almacenes
+            [ "_rol"=>9, "_permission"=>2, "_module"=>"9a66" ],//preventa en almasens
+            [ "_rol"=>9, "_permission"=>1, "_module"=>"ade8" ],//resurtid
+            [ "_rol"=>9, "_permission"=>1, "_module"=>"4e43" ],//reporteria
+            [ "_rol"=>9, "_permission"=>1, "_module"=>"a831" ],//configuarcion preventa
 
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"3.0" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"3.1" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"3.1.1" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"3.2" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"3.3" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"3.4" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"3.5" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"3.6" ],
-
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"4.0" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"5.0" ],
         ];
 
         ### modulos subgerentes (10)
         $auxiliars = [
-            [ "_rol"=>10, "_permission"=>3, "_module"=>"1.0" ],
+            [ "_rol"=>10, "_permission"=>2, "_module"=>"284c" ],//etiquetadora
+            [ "_rol"=>10, "_permission"=>3, "_module"=>"4a82" ],//presupuestos
 
-            [ "_rol"=>10, "_permission"=>3, "_module"=>"2.0" ],
-            [ "_rol"=>10, "_permission"=>3, "_module"=>"2.1" ],
-            [ "_rol"=>10, "_permission"=>3, "_module"=>"2.2" ],
-            [ "_rol"=>10, "_permission"=>2, "_module"=>"2.3" ],
-            [ "_rol"=>10, "_permission"=>3, "_module"=>"2.4" ],
-            [ "_rol"=>10, "_permission"=>3, "_module"=>"2.5" ],
-            [ "_rol"=>10, "_permission"=>2, "_module"=>"2.6" ],
-            [ "_rol"=>10, "_permission"=>2, "_module"=>"2.7" ],
-            [ "_rol"=>10, "_permission"=>3, "_module"=>"2.8" ],
-
-            [ "_rol"=>9, "_permission"=>3, "_module"=>"3.0" ],
-            [ "_rol"=>9, "_permission"=>2, "_module"=>"3.1" ],
-            [ "_rol"=>9, "_permission"=>2, "_module"=>"3.1.1" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"3.2" ],
-            [ "_rol"=>9, "_permission"=>1, "_module"=>"3.3" ],
-            [ "_rol"=>9, "_permission"=>2, "_module"=>"3.4" ],
-            [ "_rol"=>9, "_permission"=>2, "_module"=>"3.5" ],
-            [ "_rol"=>9, "_permission"=>2, "_module"=>"3.6" ],
-
-            [ "_rol"=>10, "_permission"=>1, "_module"=>"4.0" ],
-            [ "_rol"=>10, "_permission"=>3, "_module"=>"5.0" ],
+            [ "_rol"=>10, "_permission"=>2, "_module"=>"4bed" ],//preventa
+            [ "_rol"=>10, "_permission"=>2, "_module"=>"9b4e" ],//checkin
+            [ "_rol"=>10, "_permission"=>2, "_module"=>"9ecc" ],//ubicador
+            [ "_rol"=>10, "_permission"=>2, "_module"=>"a313" ],//cajas
+            [ "_rol"=>10, "_permission"=>3, "_module"=>"b599" ],//almacenes
+            [ "_rol"=>10, "_permission"=>2, "_module"=>"9a66" ],//preventa en almasens
+            [ "_rol"=>10, "_permission"=>2, "_module"=>"ade8" ],//resurtid
+            [ "_rol"=>10, "_permission"=>2, "_module"=>"4e43" ],//reporteria
+            [ "_rol"=>10, "_permission"=>2, "_module"=>"a831" ],//configuarcion preventa
         ];
 
         echo "Eliminando permisos default a Gerentes y Auxiliares (9 y 10) ...\n"; sleep(1);

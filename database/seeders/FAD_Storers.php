@@ -24,28 +24,22 @@ class FAD_Storers extends Seeder
 
         ### modulos Almacenistas leads (11)
         $leads = [
-            [ "_rol"=>11, "_permission"=>1, "_module"=>"2.0" ],
-            [ "_rol"=>11, "_permission"=>1, "_module"=>"2.1" ],
-            [ "_rol"=>11, "_permission"=>1, "_module"=>"2.2" ],
-            [ "_rol"=>11, "_permission"=>1, "_module"=>"2.3" ],
-            [ "_rol"=>11, "_permission"=>1, "_module"=>"2.4" ],
-            [ "_rol"=>11, "_permission"=>1, "_module"=>"2.5" ],
-            [ "_rol"=>11, "_permission"=>1, "_module"=>"2.6" ],
-            [ "_rol"=>11, "_permission"=>1, "_module"=>"2.7" ],
-            [ "_rol"=>11, "_permission"=>1, "_module"=>"2.8" ],
+            [ "_rol"=>11, "_permission"=>1, "_module"=>"284c" ],//etiequetador
+            [ "_rol"=>11, "_permission"=>1, "_module"=>"9b4e" ],//checking
+            [ "_rol"=>11, "_permission"=>1, "_module"=>"9ecc" ],//ubicador
+            [ "_rol"=>11, "_permission"=>1, "_module"=>"b599" ],//almacenes
+            [ "_rol"=>11, "_permission"=>1, "_module"=>"46d9" ],//producto
+            [ "_rol"=>11, "_permission"=>1, "_module"=>"9a66" ],//preventa
+            [ "_rol"=>11, "_permission"=>1, "_module"=>"ade8" ],//resurtido
+            [ "_rol"=>11, "_permission"=>1, "_module"=>"4e43" ],//reporteria
+            [ "_rol"=>11, "_permission"=>1, "_module"=>"a831" ],//configuracion
         ];
 
         ### modulos Almacenistas leads (12)
         $operatives = [
-            [ "_rol"=>12, "_permission"=>1, "_module"=>"2.0" ],
-            [ "_rol"=>12, "_permission"=>1, "_module"=>"2.1" ],
-            [ "_rol"=>12, "_permission"=>1, "_module"=>"2.2" ],
-            [ "_rol"=>12, "_permission"=>1, "_module"=>"2.3" ],
-            [ "_rol"=>12, "_permission"=>1, "_module"=>"2.4" ],
-            [ "_rol"=>12, "_permission"=>1, "_module"=>"2.5" ],
-            [ "_rol"=>12, "_permission"=>1, "_module"=>"2.6" ],
-            [ "_rol"=>12, "_permission"=>1, "_module"=>"2.7" ],
-            [ "_rol"=>12, "_permission"=>1, "_module"=>"2.8" ],
+            [ "_rol"=>12, "_permission"=>1, "_module"=>"284c" ],//etiequetador
+            [ "_rol"=>12, "_permission"=>2, "_module"=>"9ecc" ],//ubicador
+            [ "_rol"=>12, "_permission"=>2, "_module"=>"46d9" ],//producto
         ];
 
         echo "Eliminando permisos default a Almacenistas (11 y 12) ...\n"; sleep(1);

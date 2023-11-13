@@ -24,33 +24,28 @@ class FAD_Salers extends Seeder
 
         ### usuarios Vendedores ( leads / operatives )
         $leads = [
-            [ "_rol"=>15, "_permission"=>1, "_module"=>"3.0" ],
-            [ "_rol"=>15, "_permission"=>1, "_module"=>"3.1" ],
-            [ "_rol"=>15, "_permission"=>1, "_module"=>"3.1.1" ],
-            [ "_rol"=>15, "_permission"=>1, "_module"=>"3.2" ],
-            [ "_rol"=>15, "_permission"=>1, "_module"=>"3.3" ],
-            [ "_rol"=>15, "_permission"=>1, "_module"=>"3.4" ],
-            [ "_rol"=>15, "_permission"=>2, "_module"=>"3.5" ],
-            [ "_rol"=>15, "_permission"=>1, "_module"=>"3.6" ],
+            [ "_rol"=>15, "_permission"=>1, "_module"=>"284c" ],//etiquetadora
+            [ "_rol"=>15, "_permission"=>1, "_module"=>"4bed" ],//preventa
+            [ "_rol"=>15, "_permission"=>2, "_module"=>"9ecc" ],//ubicador
+            [ "_rol"=>15, "_permission"=>2, "_module"=>"4e43" ],//reporteria
         ];
 
         $operatives = [
-            [ "_rol"=>16, "_permission"=>3, "_module"=>"3.0" ],
-            [ "_rol"=>16, "_permission"=>2, "_module"=>"3.1" ],
-            [ "_rol"=>16, "_permission"=>2, "_module"=>"3.2" ],
+            [ "_rol"=>16, "_permission"=>1, "_module"=>"284c" ],//etiquetadora
+            [ "_rol"=>16, "_permission"=>1, "_module"=>"4bed" ],//preventa
         ];
 
         echo "Eliminando permisos default a Ventas (15 y 16) ...\n"; sleep(1);
-        $auths_dels = DB::table("role_default_permissions")->whereIn("_rol",[3,4])->delete();
+        $auths_dels = DB::table("role_default_permissions")->whereIn("_rol",[15,16])->delete();
 
         foreach($leads as $mod){
             $ins = DB::table("role_default_permissions")->insert($mod);
-            echo "MOD: ".$mod["_module"]." <==> AUTH: ".$mod["_permission"]." agregado a Auditor (lead)\n";
+            echo "MOD: ".$mod["_module"]." <==> AUTH: ".$mod["_permission"]." agregado a Vendedor (lead)\n";
         }
 
         foreach($operatives as $mod){
             $ins = DB::table("role_default_permissions")->insert($mod);
-            echo "MOD: ".$mod["_module"]." <==> AUTH: ".$mod["_permission"]." agregado a Auditor (op)\n";
+            echo "MOD: ".$mod["_module"]." <==> AUTH: ".$mod["_permission"]." agregado a Vendedor (op)\n";
         }
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
