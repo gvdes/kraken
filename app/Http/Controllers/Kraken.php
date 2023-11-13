@@ -14,7 +14,7 @@ class Kraken extends Controller
     public function trySignin(Request $request){
         $nick = $request->nick; // recibe el nick
         $pass = $request->pass; // recibe el pass
-        $device = $request->ip();
+        $ip = $request->ip(); // obtenemos ip del dispositivo que envio peticion
 
         /**
          * Se realiza la busqueda de una cuenta en base a
@@ -22,7 +22,7 @@ class Kraken extends Controller
          */
         $user = User::where('nick',$nick)->orWhere('celphone',$nick)->orWhere('email',$nick)->first();
 
-        if(($nick&&$pass)&&$user&&Hash::check($pass,$user->password)){
+        if(($nick&&$pass)&&$user&&Hash::check($pass,$user->password)){ // comparacion de contraseña y carga de datos para la cuenta
 
             $user->load([
                 'rol',
@@ -35,17 +35,17 @@ class Kraken extends Controller
             // se mapean las filas de los modulos para parsear a un objeto los detalles del modulo (icono etc...)
             // $user->modules->map(function($m){ $m->module->details = json_decode($m->module->details); return $m; });
 
-            if($user->_state<=2){
+            if($user->_state<=2){ // la cuenta puede iniciar sesion (genera "token" de identificacion)
                 $datafortoken = [ "uid"=>$user->id, "rol"=>$user->_rol ]; // data que se encrypta en el token autenticador
                 $token = $this->genToken($datafortoken);// genera el token con el rol y el id del usuario + fecha de creacion + fecha de expiracion (tiempo que es valido el token)
 
                 /** si el status es 2 agregar al usuario el log de inicio de sesion */
                 if($user->_state==2){
-                    $details = [ "device"=>$device, "at"=>Carbon::now()->format("Y-m-d h:i:s") ];
+                    $details = [ "device"=>$ip, "at"=>Carbon::now()->format("Y-m-d h:i:s") ];
                     UserLog::create([ "_user"=>$user->id, "_type_log"=>2, "details"=>json_encode($details) ]);
                 }
 
-                return response()->json([ "account"=>$user, "token"=>$token, "ip"=>$device ]);
+                return response()->json([ "account"=>$user, "token"=>$token, "ip"=>$ip ]);
             } return response()->json([ "state"=>$user->state], 401 );// cuenta bloqueada o archivada
         } return response("credenciales erroneas!", 404);// password incorrecto
     }
@@ -58,16 +58,16 @@ class Kraken extends Controller
 
     public function firstLogin(Request $request){
         $uid = $request->fixeds->uid;
-        $device = $request->ip();
+        $ip = $request->ip();
         $newPass = Hash::make($request->newpass);
-        $details = [ "device"=>$device, "at"=>Carbon::now()->format("Y-m-d h:i:s") ];
+        $details = [ "ip"=>$ip, "at"=>Carbon::now()->format("Y-m-d h:i:s") ];
 
         $user = User::with([
             'rol',
             'state',
             'store',
-            'stores'
-            // 'modules'=> fn($q) => $q->with([ 'permission', 'module' ])
+            'stores',
+            'modules'=> fn($q) => $q->with([ 'permission', 'module' ])
         ])->find($uid);
 
         $user->password = $newPass;
@@ -75,11 +75,7 @@ class Kraken extends Controller
         $user->change_password = 0;
         $user->save();
 
-        $log = UserLog::create([
-            "_user" => $uid,
-            "_type_log" => 2,
-            "details" => json_encode($details)
-        ]);
+        UserLog::create([ "_user" => $uid, "_type_log" => 2, "details" => json_encode($details) ]);
 
         $user->refresh();
 

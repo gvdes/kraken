@@ -13,7 +13,7 @@ class StoreController extends Controller
         $this->sid = $request->route('sid');
     }
 
-    public function index(Request $request){
+    public function index(){
 
         return response()->json([
             "msg" => "Welcome at the store ($this->sid)",

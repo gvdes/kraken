@@ -42,7 +42,7 @@ Route::middleware('kraken')->group(function(){
         ->group(function(){
             Route::get('/', [StoreController::class, 'index']);
 
-            Route::prefix('warehouses')->controller(WarehouseController::class)->group(function(){
+            Route::prefix('wareouses')->controller(WarehouseController::class)->group(function(){
                 Route::get('/', 'index');
 
                 Route::prefix('/{wid}')
