@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\Store;
 use Illuminate\Support\Facades\DB;
 
 class UsersController extends Controller
@@ -30,6 +31,16 @@ class UsersController extends Controller
             return response()->json($log);
         }else{
             return response("Meriyein: asegurate de enviar un array valido y no vacio", 400);
+        }
+    }
+
+    public function Index(Request $request){
+        $users = User::with('store:id,name','rol.area')->get();
+        // $users = User::with('area')->get();
+        if($users){
+            return response()->json($users,200);
+        }else{
+            return response()->json("No hay ningun Usuario",404);
         }
     }
 }

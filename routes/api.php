@@ -91,13 +91,18 @@ Route::middleware('kraken')->group(function(){
     Route::prefix('cluster')
     // ->middleware('cluster')
     ->group(function(){
+        Route::prefix('accounts')->controller(UsersController::class)->group(function(){
+            Route::patch('fullreset','fullReset');
+            Route::get('users','index');
+        });
+    });
 
-        Route::prefix('accounts')
-            ->controller(UsersController::class)
-            ->group(function(){
-                Route::patch('fullreset','fullReset');
-            });
-
+    Route::prefix('cluster')
+    ->middleware('UseUsers')
+    ->group(function(){
+        Route::prefix('accounts')->controller(UsersController::class)->group(function(){
+            Route::get('users','index');
+        });
     });
 
     Route::prefix('vmedia')

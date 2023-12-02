@@ -22,7 +22,7 @@ class SetModulesApp extends Seeder
              * **********************/
             DB::table('modules_app')->insert([
                 [ "id"=>"4f36", "name"=>"Usuarios", "root"=>"CLU", "deep"=>0, "path"=>"team", "details"=>json_encode([]) ],
-                    [ "id"=>"972e", "name"=>"Builder", "root"=>"4f36", "deep"=>1, "path"=>"team/builder", "details"=>json_encode([]) ],
+                    [ "id"=>"972e", "name"=>"Builder", "root"=>"4f36", "deep"=>1, "path"=>"builder", "details"=>json_encode([]) ],
 
                 [ "id"=>"bc02", "name"=>"Sucursales", "root"=>"CLU", "deep"=>0, "path"=>"stores", "details"=>json_encode([]) ],
 
@@ -50,14 +50,17 @@ class SetModulesApp extends Seeder
                 [ "id"=>"9f4f", "name"=>"Ventas", "root"=>"BOF", "deep"=>0, "path"=>"preorders", "details"=>json_encode([]) ],
 
                 [ "id"=>"4bed", "name"=>"Preventa", "root"=>"BOF", "deep"=>0, "path"=>"preorders", "details"=>json_encode([]) ],
-                    [ "id"=>"4e49", "name"=>"Reporteria", "root"=>"4bed", "deep"=>1, "path"=>"preorders/reports", "details"=>json_encode([]) ],
-                    [ "id"=>"a831", "name"=>"Configuracion", "root"=>"4bed", "deep"=>1, "path"=>"preorders/config", "details"=>json_encode([]) ],
+                    [ "id"=>"4e49", "name"=>"Reporteria", "root"=>"4bed", "deep"=>1, "path"=>"reports", "details"=>json_encode([]) ],
+                    [ "id"=>"a831", "name"=>"Configuracion", "root"=>"4bed", "deep"=>1, "path"=>"config", "details"=>json_encode([]) ],
 
 
                 [ "id"=>"284c", "name"=>"Etiquetadora", "root"=>"BOF", "deep"=>0, "path"=>"labeler", "details"=>json_encode([]) ],
 
                 [ "id"=>"b599", "name"=>"Almacenes", "root"=>"BOF", "deep"=>0, "path"=>"warehouses", "details"=>json_encode([]) ],
-                    [ "id"=>"46d9", "name"=>"Producto", "root"=>"b599", "deep"=>1, "path"=>"warehouses/product", "details"=>json_encode([]) ],
+                    [ "id"=>"46d9", "name"=>"Producto", "root"=>"b599", "deep"=>1, "path"=>"product", "details"=>json_encode([]) ],
+                    [ "id"=>"0fac", "name"=>"Inventarios", "root"=>"b599", "deep"=>1, "path"=>"inventories", "details"=>json_encode([]) ],
+                        [ "id"=>"27da", "name"=>"Ciclicos", "root"=>"0fac", "deep"=>1, "path"=>"cyclecount", "details"=>json_encode([]) ],
+
 
                 [ "id"=>"9a66", "name"=>"Ordenes", "root"=>"BOF", "deep"=>0, "path"=>"supply", "details"=>json_encode([]) ],
 
@@ -67,11 +70,11 @@ class SetModulesApp extends Seeder
 
                 [ "id"=>"9b4e", "name"=>"Check In", "root"=>"BOF", "deep"=>0, "path"=>"preorders", "details"=>json_encode([]) ],
 
-                [ "id"=>"4a82", "name"=>"Presupuestos", "root"=>"BOF", "deep"=>0, "path"=>"sales/budget", "details"=>json_encode([]) ],
+                [ "id"=>"4a82", "name"=>"Presupuestos", "root"=>"BOF", "deep"=>0, "path"=>"budget", "details"=>json_encode([]) ],
 
-                [ "id"=>"65af", "name"=>"POS", "root"=>"BOF", "deep"=>0, "path"=>"sales/pos", "details"=>json_encode([]) ],
+                [ "id"=>"65af", "name"=>"POS", "root"=>"BOF", "deep"=>0, "path"=>"pos", "details"=>json_encode([]) ],
 
-                [ "id"=>"a313", "name"=>"Cajas", "root"=>"BOF", "deep"=>0, "path"=>"sales/cashdesks", "details"=>json_encode([]) ],
+                [ "id"=>"a313", "name"=>"Cajas", "root"=>"BOF", "deep"=>0, "path"=>"cashdesks", "details"=>json_encode([]) ],
 
 
 

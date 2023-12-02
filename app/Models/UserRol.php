@@ -10,4 +10,7 @@ class UserRol extends Model
     use HasFactory;
 
     protected $table = 'user_roles';
+
+    public function area(){ return $this->hasOne('App\Models\Area','id','_area');}
+
 }
