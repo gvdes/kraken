@@ -5,9 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class UserStores extends Model
+class RolDefaultPermission extends Model
 {
-    public $timestamps = false;
+    protected $table = 'role_default_permissions';
 
-    protected $table = 'user_stores';
 }

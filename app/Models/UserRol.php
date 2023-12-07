@@ -13,4 +13,6 @@ class UserRol extends Model
 
     public function area(){ return $this->hasOne('App\Models\Area','id','_area');}
 
+    public function permissions(){ return $this->hasMany('App\Models\RolDefaultPermission','_rol','id');}
+
 }

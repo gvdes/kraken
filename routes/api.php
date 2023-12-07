@@ -101,7 +101,9 @@ Route::middleware('kraken')->group(function(){
     ->middleware('UseUsers')
     ->group(function(){
         Route::prefix('accounts')->controller(UsersController::class)->group(function(){
-            Route::get('users','index');
+            Route::get('users','getUsers');
+            Route::get('getIndex','getIndex');
+            Route::post('adduser','addUser');
         });
     });
 
