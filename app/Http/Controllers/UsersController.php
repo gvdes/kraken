@@ -55,7 +55,7 @@ class UsersController extends Controller
         $roles = Area::with('roles')->get();
         $workpoints = Store::select('id as value','name as label','alias')->get();
         $allwork = Store::all();
-        $app = App::select('id as value','name as label','name')->get();
+        $app = Apps::select('id as value','name as label','name')->get();
         $res = [
             "roles"=>$roles,
             "workpoints"=>$workpoints,
