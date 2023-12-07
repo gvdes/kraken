@@ -24,4 +24,6 @@ class User extends Model
     public function state(){ return $this->hasOne('App\Models\UserStates','id','_state'); }
 
     public function rol(){ return $this->hasOne('App\Models\UserRol','id','_rol'); }
+
+    public function apps(){ return $this->hasMany('App\Models\UserApps','_user'); }
 }

@@ -29,7 +29,8 @@ class Kraken extends Controller
                 'state',
                 'store',
                 'stores',
-                'modules' => fn($q) => $q->with([ 'permission', 'module' ])
+                'modules' => fn($q) => $q->with([ 'permission', 'module' ]),
+                'apps' => fn($q) => $q->with([ 'app' ])
             ]);
 
             // se mapean las filas de los modulos para parsear a un objeto los detalles del modulo (icono etc...)
@@ -67,7 +68,8 @@ class Kraken extends Controller
             'state',
             'store',
             'stores',
-            'modules'=> fn($q) => $q->with([ 'permission', 'module' ])
+            'modules' => fn($q) => $q->with([ 'permission', 'module' ]),
+            'apps' => fn($q) => $q->with([ 'app' ])
         ])->find($uid);
 
         $user->password = $newPass;
