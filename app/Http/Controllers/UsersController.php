@@ -8,6 +8,7 @@ use App\Models\Store;
 use App\Models\Area;
 use App\Models\UserStores;
 use App\Models\Apps;
+use App\Models\UserApps;
 use App\Models\UserRol;
 use App\Models\UserModules;
 use Illuminate\Support\Facades\DB;
@@ -56,11 +57,13 @@ class UsersController extends Controller
         $workpoints = Store::select('id as value','name as label','alias')->get();
         $allwork = Store::all();
         $app = Apps::select('id as value','name as label','name')->get();
+        $usuarios = User::all();
         $res = [
             "roles"=>$roles,
             "workpoints"=>$workpoints,
             "app"=>$app,
-            "namework"=>$allwork
+            "namework"=>$allwork,
+            "usuarios"=>$usuarios
         ];
         return response()->json($res,200);
     }
@@ -97,26 +100,33 @@ class UsersController extends Controller
                     $res = $user->fresh()->toArray();
                     if($res){
                          //userapps
-                        //  $app = new App();
-                        //  foreach($request->apps as $api){
-                        //     $app->_user = $res['id'];
-                        //     $app->_app = $api;
-                        //     $api->save();
-                        //  }
+                         $app = new UserApps();
+                         if($request->apps){
+                            foreach($request->apps as $api){
+                                $insapp[] = [
+                                    "_user"=> $res['id'],
+                                    "_app"=>$api,
+                                ];
+                             }
+                             $app->insert($insapp);
+                         }
+
                          //user_storest
-                         $stores = UserStores::where('_user',1)->whereIn('_store',$request->stores);
+                         $stores = UserStores::where('_user',$res['id'])->whereIn('_store',$request->stores);
                          $stores->update(['_state'=>1]);
 
                         //user_permissions
+                        $useper = new UserModules;
                         $permissions = UserRol::with('permissions')->where('id',$request->_rol)->first();
                         $permi = $permissions['permissions'];
-                        $useper = new UserModules;
                         foreach($permi as $pre){
-                            $useper->_user = $res['id'];
-                            $useper->_permission = $pre['_permission'];
-                            $useper->_module = $pre['_module'];
-                            $useper->save();
+                            $inserper[] = [
+                                "_user"=>$res['id'],
+                                "_permission"=>$pre['_permission'],
+                                "_module"=>$pre['_module']
+                            ];
                         }
+                        $useper->insert($inserper);
 
                         return response()->json($res,200);
                     }else{
@@ -124,6 +134,48 @@ class UsersController extends Controller
                     }
                 }
             }
+        }
+    }
+
+    public function getUserWorkpoint(){
+
+        $users = User::with('rol','rol.area')->whereHas('rol.area', function($q){
+            $q->whereIn('id',[15,16,17]);
+        })->get();
+        $branches = Store::whereNotIn('id',[17,100])->get();
+
+        $res = [
+            "users"=>$users,
+            "branches"=>$branches
+        ];
+        return response()->json($res,200);
+    }
+
+    public function changeWork(Request $request){
+        $store = $request->store;
+        $user = $request->user;
+        $chus = User::find($user);
+        $wkp = $chus->_store;
+
+        $upd = UserStores::where('_user',$user)->where('_store',$wkp)->update(['_state'=>2]);
+        if($upd){
+            $updn = UserStores::where('_user',$user)->where('_store',$store)->update(['_state'=>1]);
+            if($updn){
+                $updu = User::where('id',$user)->update(['_store'=>$store]);
+                if($updu){
+                    $res = "Cambio Usuario Realizado";
+                    return response()->json($res,200);
+                }else{
+                    $res = "No se pudo actualizar el usuario";
+                    return response()->json($res,404);
+                }
+            }else{
+                $res = "No se pudo actualizar el usuario";
+                return response()->json($res,404);
+            }
+        }else {
+            $res = "No se pudo actualizar el usuario";
+            return response()->json($res,404);
         }
     }
 }

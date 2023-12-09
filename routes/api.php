@@ -103,6 +103,8 @@ Route::middleware('kraken')->group(function(){
         Route::prefix('accounts')->controller(UsersController::class)->group(function(){
             Route::get('users','getUsers');
             Route::get('getIndex','getIndex');
+            Route::get('getUserWor','getUserWorkpoint');
+            Route::put('changework','changeWork');
             Route::post('adduser','addUser');
         });
     });
