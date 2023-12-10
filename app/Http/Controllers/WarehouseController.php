@@ -151,8 +151,36 @@ class WarehouseController extends Controller
         return response()->json($report);
     }
 
-    public function create(){
-        return response()->json("You try to create a warehouse");
+    public function create(Request $request){
+        $sid = $request->route('sid');
+        $name = $request->name;
+        $alias = $request->alias;
+
+        try {
+            // validar que el usuario tenga acceso al permiso de crear sucursal
+            // $canCreate = $query();
+
+            // validare que la combinacion de nombre/alias/store/ no exista
+            $exists = Warehouse::where([ "name"=>$name, "alias"=>$alias, "_store"=>$sid ])->first();
+
+            if($exists){
+                return response()->json(["duplicate"=>true,"warehouse"=>$exists]);
+            }else{
+                $wrh = new Warehouse();
+                $wrh->name = $name;
+                $wrh->alias = $alias;
+                $wrh->_store = $sid;
+                $wrh->_type = 3;
+                $wrh->_state = 1;
+
+                $wrh->save();
+                $wrh->load(['type']);
+
+                return response()->json(["duplicate"=>false,"warehouse"=>$wrh]);
+            }
+        } catch (\Exception $e) {
+            return response($e->getMessage(),500);
+        }
     }
 
     private function productsIn($wid, $rep=0, $rows=false){

@@ -10,6 +10,7 @@ class Warehouse extends Model
     use HasFactory;
 
     protected $table = 'warehouses';
+    public $timestamps = false;
 
     public function type(){
         return $this->hasOne('App\Models\WarehouseType','id','_type');
