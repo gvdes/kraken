@@ -11,6 +11,8 @@ use App\Models\Apps;
 use App\Models\UserApps;
 use App\Models\UserRol;
 use App\Models\UserModules;
+use App\Models\UserStates;
+use App\Models\UserLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
@@ -44,9 +46,20 @@ class UsersController extends Controller
 
     public function getUsers(Request $request){
         $users = User::with('store:id,name','rol.area')->get();
+        $branches = Store::all();
+        $position = UserRol::all();
+        $area = Area::all();
+        $status = UserStates::all();
         // $users = User::with('area')->get();
         if($users){
-            return response()->json($users,200);
+            $res = [
+                "usuarios"=>$users,
+                "branches"=>$branches,
+                "position"=>$position,
+                "area"=>$area,
+                "status"=>$status
+            ];
+            return response()->json($res,200);
         }else{
             return response()->json("No hay ningun Usuario",404);
         }
@@ -69,6 +82,8 @@ class UsersController extends Controller
     }
 
     public function addUser(Request $request){
+        $device = $request->ip();
+        $account = $request->user;
         $nick = $request->nick;
         $celphone = str_replace('-','',$request->celphone);
         $exist = User::where('nick',$nick)->get();
@@ -127,6 +142,16 @@ class UsersController extends Controller
                             ];
                         }
                         $useper->insert($inserper);
+
+                        $inslog = new UserLog();
+                        $inslog->_user = $account;
+                        $inslog->_type_log = 1;
+                        $inslog->details = json_encode([
+                            "at"=>now()->format('Y-m-d H:m:s'),
+                            "device"=>$device,
+                            "account"=>["id"=>$res['id'], "nick"=>$res['nick']]
+                        ]);
+                        $inslog->save();
 
                         return response()->json($res,200);
                     }else{
