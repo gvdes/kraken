@@ -12,24 +12,22 @@ use App\Models\RestockTypes;
 use App\Models\ProductStock;
 use App\Models\RestockStates;
 use App\Models\ProductLocation;
+use App\Models\TransferBW;
 
 class Elo extends Controller {
     public function index(Request $request){
-        $nick = "crack";
+        $store = 2;
+        $init = Carbon::now()->startOfDay()->format("Y-m-d H:i:s");
+        $end = Carbon::now()->endOfDay()->format("Y-m-d H:i:s");
 
-        $user = User::where('nick',$nick)->orWhere('celphone',$nick)->orWhere('email',$nick)->first();
+        $transfers = TransferBW::with([ "from", "to", "created_by" ])
+            ->whereHas('from.Store', function($q) use($store){ $q->where('id',$store); })
+            ->whereBetween('created_at',[$init,$end])
+            ->get();
 
-        $user->load([
-            'rol',
-            'state',
-            'store',
-            'stores',
-            'modules' => fn($q) => $q->with([ 'permission', 'module' ])
-        ]);
-
-        // dd($user);
-
-        return $user;
+        // dd($transfers);
+        // return $transfers;
+        return true;
     }
 }
 

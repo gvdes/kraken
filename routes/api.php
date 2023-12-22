@@ -89,6 +89,17 @@ Route::middleware('kraken')->group(function(){
                 });
         });
 
+    Route::prefix('apps/{sid}')
+        ->group(function(){
+            Route::prefix('transfers')
+            ->controller(App\Http\Controllers\AppTransfers::class)
+            ->group(function(){
+                Route::get('/', 'index');
+                Route::post('/', 'create');
+                Route::get('/adminview', 'adminView');
+            });
+    });
+
     Route::prefix('cluster')
     // ->middleware('cluster')
     ->group(function(){
