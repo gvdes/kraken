@@ -45,19 +45,22 @@ class UsersController extends Controller
     }
 
     public function getUsers(Request $request){
-        $users = User::with('store:id,name','rol.area')->get();
+        $users = User::with('store:id,name','rol.area','state','useStore')->get();
         $branches = Store::all();
-        $position = UserRol::all();
+        $position = UserRol::with('area')->get();
         $area = Area::all();
+        $app = Apps::select('id as value','name as label','name')->get();
         $status = UserStates::all();
-        // $users = User::with('area')->get();
+        $workpoints = Store::select('id as value','name as label','alias')->get();
         if($users){
             $res = [
                 "usuarios"=>$users,
                 "branches"=>$branches,
                 "position"=>$position,
                 "area"=>$area,
-                "status"=>$status
+                "status"=>$status,
+                "workpoints"=>$workpoints,
+                "apps"=>$app
             ];
             return response()->json($res,200);
         }else{
