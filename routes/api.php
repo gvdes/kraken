@@ -117,6 +117,7 @@ Route::middleware('kraken')->group(function(){
             Route::get('getIndex','getIndex');
             Route::get('getUserWor','getUserWorkpoint');
             Route::put('changework','changeWork');
+            Route::post('updateuser','updateUser');
             Route::post('adduser','addUser');
         });
     });

@@ -45,13 +45,13 @@ class UsersController extends Controller
     }
 
     public function getUsers(Request $request){
-        $users = User::with('store:id,name','rol.area','state','useStore')->get();
+        $users = User::with('store:id,name','rol.area','state','useStore','apps')->get();
         $branches = Store::all();
         $position = UserRol::with('area')->get();
         $area = Area::all();
         $app = Apps::select('id as value','name as label','name')->get();
         $status = UserStates::all();
-        $workpoints = Store::select('id as value','name as label','alias')->get();
+        $workpoints = Store::select('id as value','name as label','alias', 'name')->get();
         if($users){
             $res = [
                 "usuarios"=>$users,
@@ -204,6 +204,66 @@ class UsersController extends Controller
         }else {
             $res = "No se pudo actualizar el usuario";
             return response()->json($res,404);
+        }
+    }
+
+    public function updateUser(Request $request){
+        // return $request->all();
+        $device = $request->ip();
+        $account = $request->user;
+        $user = User::find($request->id);
+        $user->name = $request->name;
+        $user->surnames = $request->surnames;
+        $user->dob = $request->dob;
+        $user->celphone = $request->celphone;
+        $user->nick = $request->nick;
+        $user->email = $request->email;
+        $user->gender = $request->gender;
+        $user->_rol = $request->rol['id'];
+        $user->_state = $request->state['id'];
+        $user->_store = isset($request->store['value']) ? $request->store['value'] : $request->store['id'];
+        $user->save();
+        $res = $user->fresh()->toArray();
+        if($res){
+            //userapps
+            $app = new UserApps();
+            if($request->apps){
+                $deleted = UserApps::where('_user',$request->id)->delete();
+                $app->insert($request->apps);
+            }
+            //stores
+            $stores = $request->use_store;
+             foreach($stores as $store){
+                $usestore = UserStores::where('_user',$request->id)->where('_store',$store['_store']);
+                $usestore->update(['_state'=>$store['_state']]);
+            }
+            //permissions
+
+            $useper = new UserModules;
+            $delete = UserModules::where('_user',$request->id)->delete();
+            $permissions = UserRol::with('permissions')->where('id',$request->rol['id'])->first();
+            $permi = $permissions['permissions'];
+            foreach($permi as $pre){
+                $inserper[] = [
+                    "_user"=>$request->id,
+                    "_permission"=>$pre['_permission'],
+                    "_module"=>$pre['_module']
+                ];
+            }
+            $useper->insert($inserper);
+
+            $inslog = new UserLog();
+            $inslog->_user = $account;
+            $inslog->_type_log = 3;
+            $inslog->details = json_encode([
+                "at"=>now()->format('Y-m-d H:m:s'),
+                "device"=>$device,
+                "account"=>["id"=>$request->id, "nick"=>$request->nick,"_state"=>$request->state['id']]
+            ]);
+            $inslog->save();
+            return response()->json($res,200);
+        }else{
+
         }
     }
 }
