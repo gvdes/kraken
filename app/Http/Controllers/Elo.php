@@ -16,18 +16,27 @@ use App\Models\TransferBW;
 
 class Elo extends Controller {
     public function index(Request $request){
-        $store = 2;
-        $init = Carbon::now()->startOfDay()->format("Y-m-d H:i:s");
-        $end = Carbon::now()->endOfDay()->format("Y-m-d H:i:s");
+        // $store = 1;
+        // $init = Carbon::now()->startOfDay()->format("Y-m-d H:i:s");
+        // $end = Carbon::now()->endOfDay()->format("Y-m-d H:i:s");
 
-        $transfers = TransferBW::with([ "from", "to", "created_by" ])
-            ->whereHas('from.Store', function($q) use($store){ $q->where('id',$store); })
-            ->whereBetween('created_at',[$init,$end])
-            ->get();
+        // $transfers = TransferBW::with([
+        //     "from",
+        //     "to",
+        //     "created_by",
+        //     "state",
+        //     "transferists" => fn($q) => $q->with("account")
+        // ])
+        // ->whereHas('from.Store', function($q) use($store){ $q->where('id',$store); })
+        // ->whereBetween('created_at',[$init,$end])
+        // ->get();
 
-        // dd($transfers);
+        $idtrans = 3;
+        $us = collect([1,2])->map( fn($u) => [$idtrans,$u]);
+
+        dd($us);
         // return $transfers;
-        return true;
+        // return true;
     }
 }
 

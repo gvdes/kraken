@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\TransferBW;
 use App\Models\Warehouse;
 use App\Models\User;
+use App\Models\TransferBWUsers;
 use Carbon\Carbon;
 
 class AppTransfers extends Controller
@@ -19,10 +20,16 @@ class AppTransfers extends Controller
         $init = Carbon::now()->startOfDay()->format("Y-m-d H:i:s");
         $end = Carbon::now()->endOfDay()->format("Y-m-d H:i:s");
 
-        $transfers = TransferBW::with([ "from", "to", "created_by", "state" ])
-            ->whereHas('from.Store', function($q) use($store){ $q->where('id',$store); })
-            ->whereBetween('created_at',[$init,$end])
-            ->get();
+        $transfers = TransferBW::with([
+                    "from",
+                    "to",
+                    "created_by",
+                    "state",
+                    "transferists" => fn($q) => $q->with("account")
+                ])
+                ->whereHas('from.Store', function($q) use($store){ $q->where('id',$store); })
+                ->whereBetween('created_at',[$init,$end])
+                ->get();
 
         return response()->json(["transfers"=>$transfers]);
     }
@@ -42,7 +49,11 @@ class AppTransfers extends Controller
         $transfer->_state = 1;
         $transfer->save();
 
-        $transfer->load(["from", "to", "created_by", "state"]);
+        $id = $transfer->id;
+        $users = collect($transferists)->map( fn($t) => ["_transfer"=>$id,"_user"=>$t])->all();
+        TransferBWUsers::insert($users);
+
+        $transfer->load(["from", "to", "created_by", "state", "transferists" => fn($q) => $q->with("account")]);
 
         if($bidir){
             $transfer2 = new TransferBW();
@@ -52,10 +63,14 @@ class AppTransfers extends Controller
             $transfer2->_state = 1;
             $transfer2->save();
 
-            $transfer2->load(["from", "to", "created_by", "state"]);
+            $id = $transfer2->id;
+            $users = collect($transferists)->map( fn($t) => ["_transfer"=>$id,"_user"=>$t])->all();
+            TransferBWUsers::insert($users);
+
+            $transfer2->load(["from", "to", "created_by", "state", "transferists" => fn($q) => $q->with("account")]);
         }
 
-        return response()->json(["tr1"=>$transfer,"tr2"=>$transfer2]);
+        return response()->json(["tr1"=>$transfer, "tr2"=>$transfer2]);
     }
 
     public function adminView(Request $request){
