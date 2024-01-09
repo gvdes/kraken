@@ -98,6 +98,8 @@ Route::middleware('kraken')->group(function(){
                 Route::get('/', 'index');
                 Route::post('/', 'create');
                 Route::get('/adminview', 'adminView');
+                Route::get('/{tid}', 'open');
+                Route::post('/{tid}/push', 'push');
             });
     });
 
