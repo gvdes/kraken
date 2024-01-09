@@ -29,4 +29,8 @@ class TransferBW extends Model
     public function transferists(){// usuarios que tienen acceso para realizar transferencias
         return $this->hasMany('App\Models\TransferBWUsers','_transfer');
     }
+
+    public function basket(){// usuarios que tienen acceso para realizar transferencias
+        return $this->hasMany('App\Models\TransferBWProduct','_transfer');
+    }
 }
