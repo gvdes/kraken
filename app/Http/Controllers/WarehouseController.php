@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\ProductLocation;
 use App\Models\ProductStock;
 use App\Models\WarehouseType;
+use App\Models\StoresSeasons;
 use Illuminate\Support\Facades\DB;
 
 class WarehouseController extends Controller
@@ -34,9 +35,15 @@ class WarehouseController extends Controller
     public function open(Request $request){
         $wid = $request->route('wid');
 
-        $warehouse = Warehouse::find($wid);
+        $warehouse = Warehouse::with(["store" => fn($q) => $q->with("storeSeasons") ])->find($wid);
+        $products = $this->productsIn($wid,1,true); // 0.- productos en el almacen
+        $sections = Location::where([ ["root",0],["_warehouse",$wid] ])->get();
 
-        return response()->json(["warehouse"=>$warehouse]);
+        return response()->json([
+            "warehouse"=>$warehouse,
+            "products"=>$products,
+            "sections"=>$sections
+        ]);
     }
 
     public function structure(Request $request){
@@ -278,7 +285,7 @@ class WarehouseController extends Controller
                 break;
 
             // 0.- productos disponibles en almacen
-            default: $query = Product::whereHas("stocks", function($q) use($wid){ $q->where([ ["_warehouse",$wid],["_state",1] ]); }); break;
+            default: $query = Product::whereHas("stocks", function($q) use($wid){ $q->where([ ["_warehouse",$wid] ]); }); break;
         }
 
         if($rows){
@@ -286,7 +293,8 @@ class WarehouseController extends Controller
             $data = $query->get()->load([
                 "relateds",
                 "unitsupply",
-                "stock" => fn($q) => $q->where('_warehouse',$wid),
+                "state",
+                "stock" => fn($q) => $q->with(["state"])->where('_warehouse',$wid),
                 "locations" => fn($q) => $q->where('_warehouse',$wid)
             ]);
 

@@ -16,21 +16,24 @@ use App\Models\TransferBW;
 use App\Models\TransferBWProduct;
 
 class Elo extends Controller {
-    public function index(Request $request){
+    public function __invoke(Request $request){
         // $store = 1;
         // $init = Carbon::now()->startOfDay()->format("Y-m-d H:i:s");
         // $end = Carbon::now()->endOfDay()->format("Y-m-d H:i:s");
-        $tid = '9';
+        $wid = 26;
         $product = 2;
         $uid = 1;
 
-        $row = TransferBWProduct::where([
-            ["_transfer",$tid],
-            ["_product",$product],
-            ["_user",$uid],
-        ])->first();
+        $query = Product::whereHas("stocks", function($q) use($wid){ $q->where([ ["_warehouse",$wid] ]); });
 
-        // dd($row);
+        $data = $query->get()->load([
+            "relateds",
+            "unitsupply",
+            "stock" => fn($q) => $q->where('_warehouse',$wid),
+            "locations" => fn($q) => $q->where('_warehouse',$wid)
+        ]);
+
+        // dd($list);
         // return $transfers;
         return true;
     }
