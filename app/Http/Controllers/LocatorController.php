@@ -76,7 +76,7 @@ class LocatorController extends Controller
         }
 
         return response()->json([
-            "target" => "Searching $code ...",
+            "target" => "Target code $code ...",
             "additional" => $additional,
             "product" => $product,
             "sid" => $sid
@@ -84,52 +84,38 @@ class LocatorController extends Controller
     }
 
     public function toggle(Request $request){
+
+        $now = Carbon::now();
         $sid = $request->route('sid');
-        $loc = $request->loc;
-        $pro = $request->pro;
+        $lid = $request->lid;
+        $pid = $request->pid;
+        $model = [ "_product"=>$pid, "_location"=>$lid ];
         $link = null;
         $unlink = null;
-        $action = $request->opt ? 'unlink' : 'link';
-        $model = [ "_product"=>$pro, "_location"=>$loc ];
 
-        $location = Location::findOrFail($loc);
-        $location->load(['warehouse' => fn($q) => $q->with('store')]);
+        $idwrhs = Warehouse::where("_store",$sid)->select("id")->get();
 
-        $product = Product::where("id",$pro)->first();
-        $wid = $location->warehouse->store->id;
+        $proloc = ProductLocation::where($model)->first();
 
-        if($wid == $sid){
-
-            if($action == 'link'){
-                DB::table("product_locations")->where($model)->delete(); // borro todos los modelos actuales para evitar duplicidad
-                $link = new ProductLocation($model);
-                $link->save();
-            }else{
-                $now = Carbon::now();
-                $unlink = DB::table("product_locations")->where($model)->update(["deleted_at"=>$now]);
-            }
-
-            $idwrhs = Warehouse::where("_store",$wid)->select("id")->get();
-
-            $location->load([ 'products' => fn($q) => $q->with([
-                    'stocks' => fn($q) => $q->with([ 'warehouse' ])->whereIn("_warehouse", $idwrhs)
-                ])
-                ->where("product_locations.deleted_at",null)
-                ->select('id','short_code','code','barcode','description') ]);
-
-            $product->load([ 'locations' => fn($q) => $q->with('warehouse')
-                ->whereIn("_warehouse", $idwrhs)
-                ->where("product_locations.deleted_at",null)
+        if($proloc){ // vamo a eliminarla
+            $unlink = ProductLocation::where($model)->delete();
+        }else{ // vamo a crearla
+            $link = new ProductLocation($model);
+            $link->save();
+            $link->load([
+                "product" => fn($q) => $q->with(["stocks"]),
+                "location" => fn($q) => $q->with(["warehouse"])->whereIn("_warehouse", $idwrhs)
             ]);
+        }
 
-        }else{ response("No puedes usar esta ubicacion!",401); }
+        return response()->json([ "lid"=>$lid, "pid"=>$pid, "linked"=>$link, "unlinked"=>$unlink ]);
+    }
 
-        return response()->json([
-            "location"=>$location,
-            "product"=>$product,
-            "action"=>$action,
-            "link"=>$link,
-            "unlink"=>$unlink
-        ]);
+    public function unlink(Request $request){
+        $lid = $request->lid;
+        $pid = $request->pid;
+        $model = [ "_product"=>$pid, "_location"=>$lid ];
+        $unlink = ProductLocation::where($model)->delete();
+        return response()->json([ "lid"=>$lid, "pid"=>$pid, "unlinked"=>$unlink ]);
     }
 }

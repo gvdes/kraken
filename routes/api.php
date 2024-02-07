@@ -77,6 +77,8 @@ Route::middleware('kraken')->group(function(){
                     Route::get('location/{loc}', 'location');
                     Route::get('product/{code}', 'product');
                     Route::post('toggle', 'toggle');
+                    Route::post('unlink', 'unlink');
+                    Route::post('truncate', 'truncate');
             });
 
             Route::prefix('restock')

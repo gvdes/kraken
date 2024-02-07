@@ -23,19 +23,24 @@ class Elo extends Controller {
         $wid = 26;
         $product = 2;
         $uid = 1;
+        $model = [ "_product"=>8841, "_location"=>249 ];
 
-        $query = Product::whereHas("stocks", function($q) use($wid){ $q->where([ ["_warehouse",$wid] ]); });
+        $q = ProductLocation::with([ "product", "location" ])->where($model)->get();
 
-        $data = $query->get()->load([
-            "relateds",
-            "unitsupply",
-            "stock" => fn($q) => $q->where('_warehouse',$wid),
-            "locations" => fn($q) => $q->where('_warehouse',$wid)
-        ]);
+        // $q->load([ "product" ]);
 
-        // dd($list);
-        // return $transfers;
-        return true;
+        // $query = Product::whereHas("stocks", function($q) use($wid){ $q->where([ ["_warehouse",$wid] ]); });
+
+        // $data = $query->get()->load([
+        //     "relateds",
+        //     "unitsupply",
+        //     "stock" => fn($q) => $q->where('_warehouse',$wid),
+        //     "locations" => fn($q) => $q->where('_warehouse',$wid)
+        // ]);
+
+        dd($q);
+        // return $q;
+        // return true;
     }
 }
 
