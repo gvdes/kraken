@@ -170,7 +170,7 @@ class UsersController extends Controller
         $users = User::with('rol','rol.area')->whereHas('rol.area', function($q){
             $q->whereIn('id',[15,16,17]);
         })->get();
-        $branches = Store::whereNotIn('id',[17,100])->get();
+        $branches = Store::whereNotIn('id',[17,18])->get();
 
         $res = [
             "users"=>$users,

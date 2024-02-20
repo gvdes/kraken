@@ -14,7 +14,7 @@ use App\Http\Controllers\RestockController;
 use App\Http\Controllers\VmediaController;
 use App\Http\Controllers\UsersController;
 use App\Http\Controllers\StoresController;
-
+use App\Http\Controllers\ProvidersController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -126,6 +126,9 @@ Route::middleware('kraken')->group(function(){
             Route::get('index','getStores');
             Route::post('addStore','addStore');
             Route::put('updateStore','updateStore');
+        });
+        Route::prefix('providers')->middleware('UseProviders')->controller(ProvidersController::class)->group(function(){
+            Route::get('index','getProviders');
         });
     });
 
