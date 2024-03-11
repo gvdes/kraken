@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Seasons extends Model
+class ProductCategory extends Model
 {
-    protected $table = 'seasons';
+    use HasFactory;
+    protected $table = 'product_categories';
 
     public function category(){
-        return $this->belongsTo('\App\Models\ProductCategory','_category','id');
+        return $this->belongsTo('\App\Modles\ProductCategory');
     }
 }

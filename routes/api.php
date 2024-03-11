@@ -66,8 +66,6 @@ Route::middleware('kraken')->group(function(){
                                 Route::get('resume','resume');
                         });
                 });
-
-                Route::post('/', 'create');
             });
 
             Route::prefix('locator')

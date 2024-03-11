@@ -10,7 +10,11 @@ use App\Models\ProductLocation;
 use App\Models\ProductStock;
 use App\Models\WarehouseType;
 use App\Models\StoresSeasons;
+use Exception;
 use Illuminate\Support\Facades\DB;
+use PhpParser\Node\Stmt\TryCatch;
+
+use function PHPSTORM_META\type;
 
 class WarehouseController extends Controller
 {
@@ -33,17 +37,52 @@ class WarehouseController extends Controller
     }
 
     public function open(Request $request){
-        $wid = $request->route('wid');
+        $sid = $request->route('sid'); // store id
+        $wid = $request->route('wid'); // warehouse id
 
-        $warehouse = Warehouse::with(["store" => fn($q) => $q->with("storeSeasons") ])->find($wid);
-        $products = $this->productsIn($wid,1,true); // 0.- productos en el almacen
-        $sections = Location::where([ ["root",0],["_warehouse",$wid] ])->get();
+        // obtenemos los datos del almacen con su tienda
+            $warehouse = Warehouse::with([ "store" ])->find($wid);
 
-        return response()->json([
-            "warehouse"=>$warehouse,
-            "products"=>$products,
-            "sections"=>$sections
-        ]);
+        // obtenemos las temporadas de la tienda con su categoria
+            $seasons = StoresSeasons::with([ "category" ])->where([ ["_store",$sid], ["_state",1] ])->get();
+
+        // iteramos las temporadas para obtener las subcategorias de cada una
+            $season_cats = $seasons->map(function($e) {
+                $id = $e->_season; // id de la categoria raiz
+                $children = DB::select('CALL categoriesOf(?)', [$id]); // subcategoriad de la categoria raiz
+                return [ "parent"=>$e, "children"=>$children ];
+            });
+
+        // Creamos la lista completa de las categorias de la temporada
+            $idsp = $season_cats->map(fn($sc) => $sc["parent"]->_season );// ids de las categorias padre
+            $idsc = $season_cats->map(fn($sc) => $sc["children"])->flatten()->map(fn($c) => $c->id);// ids de las categorias hijas
+            $ids_cats = $idsp->merge($idsc); // lista completa de ids de las categorias en las temporadas
+
+        // obtenemos los productos en base a las categorias obtenidas arriba
+            // $products = Product::whereHas("stocks", function($q) use($wid){ $q->where([ ["_warehouse",$wid],["_state",1], ["_current",">",0] ]); })
+            $products = Product::whereHas("stocks", function($q) use($wid){ $q->where([ ["_warehouse",$wid] ]); })
+                        ->with([
+                            "relateds",
+                            "state",
+                            "unitsupply",
+                            "category",
+                            "stock" => fn($q) => $q->with(["state"])->where('_warehouse',$wid),
+                            "locations" => fn($q) => $q->where('_warehouse',$wid)
+                        ])
+                        ->whereIn("_category",$ids_cats)
+                        ->whereIn("_state",[1,3])
+                        ->get();
+
+        // Obtenemos las secciones raiz (estructura) del almacen
+            $sections_warehouse = Location::where([ ["root",0],["_warehouse",$wid] ])->get();
+
+            return response()->json([
+                "warehouse"=>$warehouse,
+                "products"=>$products,
+                "sections"=>$sections_warehouse,
+                "seasons_cats"=>$season_cats,
+                "idscats"=>$ids_cats
+            ]);
     }
 
     public function structure(Request $request){
@@ -54,50 +93,55 @@ class WarehouseController extends Controller
     }
 
     public function sectionate(Request $request){
-        $sibsSave = [];
-        $wid = $request->route('wid');
-        $siblings = $request->siblings;// cantidad de hermanos acrear
-        $name = $request->name;
-        $alias = $request->alias;
-        $group = $request->group;
-        $isnewgroup = $group?false:true; // indica si es un gupo nuevo
-        $groupname = $isnewgroup ? "$name,$alias":$group["rawgroup"];// construimos el nombre del grupo
-        $currentSiblings = Location::where([
-            ["root", 0],
-            ["_warehouse", $wid],
-            ["_group", $groupname]
-        ])->count();// traemos la cantidad de miembros actuales del grupo
-        $resgroup = $isnewgroup ? "Se creara el grupo $groupname con $siblings miembros" : "Se integraran $siblings miembros al grupo $groupname";
 
-        $x = $currentSiblings ? ($currentSiblings+1) : ($siblings>1 ? 1 : null);
+        try {
+            $sibsSave = [];
+            $wid = $request->route('wid');
+            $siblings = $request->siblings;// cantidad de hermanos acrear
+            $name = $request->name;
+            $alias = $request->alias;
+            $group = $request->group;
+            $isnewgroup = $group?false:true; // indica si es un gupo nuevo
+            $groupname = $isnewgroup ? "$name,$alias":$group["rawgroup"];// construimos el nombre del grupo
+            $currentSiblings = Location::where([
+                ["root", 0],
+                ["_warehouse", $wid],
+                ["_group", $groupname]
+            ])->count();// traemos la cantidad de miembros actuales del grupo
+            $resgroup = $isnewgroup ? "Se creara el grupo $groupname con $siblings miembros" : "Se integraran $siblings miembros al grupo $groupname";
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-            for ($i=1; $i<=$siblings ; $i++) {
-                $row = new Location([
-                    "name"      => "$name $x",
-                    "alias"     => "$alias$x",
-                    "path"      => "$alias$x",
-                    "root"      => 0,
-                    "deep"      => 0,
-                    "_warehouse"=> $wid,
-                    "_group"    => $groupname,
-                ]);
-                $row->save();
-                $row->fresh();
-                $sibsSave[] = $row;
-                $x ? $x++ : null;
-            }
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            $x = $currentSiblings ? ($currentSiblings+1) : ($siblings>1 ? 1 : null);
 
-        return response()->json([
-            "getted"=>$request->all(),
-            "idwrh"=>$wid,
-            "newgroup"=>$isnewgroup,
-            "groupname"=>$groupname,
-            "currentSiblings"=>$currentSiblings,
-            "createds"=>$sibsSave,
-            "resgroup"=>$resgroup,
-        ]);
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+                for ($i=1; $i<=$siblings ; $i++) {
+                    $row = new Location([
+                        "name"      => "$name $x",
+                        "alias"     => "$alias$x",
+                        "path"      => "$alias$x",
+                        "root"      => 0,
+                        "deep"      => 0,
+                        "_warehouse"=> $wid,
+                        "_group"    => $groupname,
+                    ]);
+                    $row->save();
+                    $row->fresh();
+                    $sibsSave[] = $row;
+                    $x ? $x++ : null;
+                }
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+            return response()->json([
+                "getted"=>$request->all(),
+                "idwrh"=>$wid,
+                "newgroup"=>$isnewgroup,
+                "groupname"=>$groupname,
+                "currentSiblings"=>$currentSiblings,
+                "createds"=>$sibsSave,
+                "resgroup"=>$resgroup,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json($e->getMessage(),500);
+        }
     }
 
     public function products(Request $request){

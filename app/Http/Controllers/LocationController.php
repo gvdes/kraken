@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Warehouse;
 use App\Models\Location;
+use Illuminate\Support\Facades\DB;
 
 class LocationController extends Controller
 {
@@ -44,60 +45,71 @@ class LocationController extends Controller
 
     public function structure(Request $request){
         $lid = $request->route('lid');
+        $location = Location::find($lid);
+        $fullpath = $this->fullpath($lid);
         $sections = Location::where("root",$lid)->get();
 
-        return response()->json(["sections" => $sections]);
+        return response()->json([
+            "location" => $location,
+            "fullpath" => $fullpath,
+            "sections" => $sections
+        ]);
     }
 
     public function sectionate(Request $request){
-        $sibsSave = [];
-        $wid = $request->route('wid');
-        $lid = $request->route('lid');
-        $siblings = $request->siblings;// cantidad de hermanos acrear
-        $name = $request->name;
-        $alias = $request->alias;
-        $group = $request->group;
-        $deep = ($request->deep+1);
-        $root = $request->root;
-        $isnewgroup = $group ? false:true; // indica si es un gupo nuevo
-        $groupname = $isnewgroup ? "$name,$alias":$group["rawgroup"];// construimos el nombre del grupo
-        $resgroup = $isnewgroup ? "Se creara el grupo $groupname con $siblings miembros" : "Se integraran $siblings miembros al grupo $groupname";
-        $fullpath = collect($this->fullpath($lid))->reverse()->implode("alias",'-');
 
-        $currentSiblings = Location::where([
-            ["root", $root],
-            ["_warehouse", $wid],
-            ["_group", $groupname]
-        ])->count();// traemos la cantidad de miembros actuales del grupo
+        try {
+            $sibsSave = [];
+            $wid = $request->route('wid');
+            $lid = $request->route('lid');
+            $siblings = $request->siblings;// cantidad de hermanos acrear
+            $name = $request->name;
+            $alias = $request->alias;
+            $group = $request->group;
+            $deep = ($request->deep+1);
+            $root = $request->root;
+            $isnewgroup = $group ? false:true; // indica si es un gupo nuevo
+            $groupname = $isnewgroup ? "$name,$alias":$group["rawgroup"];// construimos el nombre del grupo
+            $resgroup = $isnewgroup ? "Se creara el grupo $groupname con $siblings miembros" : "Se integraran $siblings miembros al grupo $groupname";
+            $fullpath = collect($this->fullpath($lid))->reverse()->implode("alias",'-');
 
-        $x = $currentSiblings ? ($currentSiblings+1) : ($siblings>1 ? 1 : null);
+            $currentSiblings = Location::where([
+                ["root", $root],
+                ["_warehouse", $wid],
+                ["_group", $groupname]
+            ])->count();// traemos la cantidad de miembros actuales del grupo
 
-        for ($i=1; $i<=$siblings; $i++) {
-            $row = new Location([
-                "name"      => "$name $x",
-                "alias"     => "$alias$x",
-                "path"      => "$fullpath-$alias$x",
-                "root"      => $root,
-                "deep"      => $deep,
-                "_warehouse"=> $wid,
-                "_group"    => $groupname,
+            $x = $currentSiblings ? ($currentSiblings+1) : ($siblings>1 ? 1 : null);
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+            for ($i=1; $i<=$siblings; $i++) {
+                $row = new Location([
+                    "name"      => "$name $x",
+                    "alias"     => "$alias$x",
+                    "path"      => "$fullpath-$alias$x",
+                    "root"      => $root,
+                    "deep"      => $deep,
+                    "_warehouse"=> $wid,
+                    "_group"    => $groupname,
+                ]);
+                $row->save();
+                $row->fresh();
+                $sibsSave[] = $row;
+                $x ? $x++ : null;
+            }
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            return response()->json([
+                "getted"=>$request->all(),
+                "idwrh"=>$wid,
+                "newgroup"=>$isnewgroup,
+                "groupname"=>$groupname,
+                "currentSiblings"=>$currentSiblings,
+                "createds"=>$sibsSave,
+                "resgroup"=>$resgroup,
+                "fullpath"=>$fullpath
             ]);
-            $row->save();
-            $row->fresh();
-            $sibsSave[] = $row;
-            $x ? $x++ : null;
+        } catch (\Exception $e) {
+            return response()->json(["error"=>$e->getMessage()],500);
         }
-
-        return response()->json([
-            "getted"=>$request->all(),
-            "idwrh"=>$wid,
-            "newgroup"=>$isnewgroup,
-            "groupname"=>$groupname,
-            "currentSiblings"=>$currentSiblings,
-            "createds"=>$sibsSave,
-            "resgroup"=>$resgroup,
-            "fullpath"=>$fullpath
-        ]);
     }
 
     public function products(Request $request){

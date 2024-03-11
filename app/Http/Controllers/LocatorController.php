@@ -33,10 +33,10 @@ class LocatorController extends Controller
             $location->load([
                 'parent',
                 'products' => fn($q) => $q->with([
-                        'stocks' => fn($q) => $q->with([ 'warehouse' ])->whereIn("_warehouse", $idwrhs)
-                    ])
-                    ->where( "product_locations.deleted_at",null )
-                    ->select('id','short_code','code','barcode','description'),
+                                'stocks' => fn($q) => $q->with([ 'warehouse' ])->whereIn("_warehouse", $idwrhs)
+                            ])
+                            ->where( "product_locations.deleted_at",null )
+                            ->select('id','short_code','code','barcode','description'),
             ]);
             return response()->json($location);
         }else{ return response("No puedes usar esta ubicacion!",401); }

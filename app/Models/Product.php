@@ -23,6 +23,8 @@ class Product extends Model
 
     public function unitsupply(){ return $this->hasOne('App\Models\UnitMeassure','id','_assortment_unit'); }
 
+    public function category(){ return $this->hasOne('App\Models\ProductCategory','id','_category'); }
+
     public function media(){ return $this->hasMany('App\Models\ProductMedia','_product','id'); }
 
 }
