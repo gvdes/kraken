@@ -7,5 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Provider extends Model
 {
-    use HasFactory;
+    protected $table = 'providers';
+    public $timestamps = false;
+    public function type(){ return $this->hasOne('App\Models\ProviderType','id', '_type');}
 }

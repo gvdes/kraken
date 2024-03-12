@@ -129,6 +129,8 @@ Route::middleware('kraken')->group(function(){
         });
         Route::prefix('providers')->middleware('UseProviders')->controller(ProvidersController::class)->group(function(){
             Route::get('index','getProviders');
+            Route::post('create','create');
+            Route::post('update','update');
         });
     });
 
