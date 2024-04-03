@@ -55,6 +55,7 @@ Route::middleware('kraken')->group(function(){
                         Route::post('structure','sectionate');
                         Route::get('products','products');
                         Route::get('resume','resume');
+                        Route::post('setminmaxstate','setminmaxstate');
                         Route::get('report/{repid}','report')->where([ 'repid' => '[0-9]+' ]);
 
                         Route::prefix('section/{lid}')
