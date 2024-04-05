@@ -69,5 +69,7 @@ class Kernel extends HttpKernel
         'UseUsers' => \App\Http\Middleware\UseUsers::class,
         'UseStores' => \App\Http\Middleware\UseStores::class,
         'UseProviders' => \App\Http\Middleware\UseProviders::class,
+        'UseProducts' => \App\Http\Middleware\UseProducts::class,
+
     ];
 }

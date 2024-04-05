@@ -15,6 +15,8 @@ use App\Http\Controllers\VmediaController;
 use App\Http\Controllers\UsersController;
 use App\Http\Controllers\StoresController;
 use App\Http\Controllers\ProvidersController;
+use App\Http\Controllers\ProductController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -131,6 +133,10 @@ Route::middleware('kraken')->group(function(){
             Route::get('index','getProviders');
             Route::post('create','create');
             Route::post('update','update');
+        });
+        Route::prefix('Products')->middleware('UseProducts')->controller(ProductController::class)->group(function(){
+            Route::get('index','index');
+            Route::get('getProduct/{product}','getProduct');
         });
     });
 
