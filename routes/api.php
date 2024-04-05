@@ -13,6 +13,9 @@ use App\Http\Controllers\ProductFinder;
 use App\Http\Controllers\RestockController;
 use App\Http\Controllers\VmediaController;
 use App\Http\Controllers\UsersController;
+use App\Http\Controllers\StoresController;
+use App\Http\Controllers\ProvidersController;
+use App\Http\Controllers\ProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -97,6 +100,8 @@ Route::middleware('kraken')->group(function(){
                 Route::get('/', 'index');
                 Route::post('/', 'create');
                 Route::get('/adminview', 'adminView');
+                Route::get('/{tid}', 'open');
+                Route::post('/{tid}/push', 'push');
             });
     });
 
@@ -110,14 +115,28 @@ Route::middleware('kraken')->group(function(){
     });
 
     Route::prefix('cluster')
-    ->middleware('UseUsers')
     ->group(function(){
-        Route::prefix('accounts')->controller(UsersController::class)->group(function(){
+        Route::prefix('accounts')->middleware('UseUsers')->controller(UsersController::class)->group(function(){
             Route::get('users','getUsers');
             Route::get('getIndex','getIndex');
             Route::get('getUserWor','getUserWorkpoint');
             Route::put('changework','changeWork');
+            Route::post('updateuser','updateUser');
             Route::post('adduser','addUser');
+        });
+        Route::prefix('stores')->middleware('UseStores')->controller(StoresController::class)->group(function(){
+            Route::get('index','getStores');
+            Route::post('addStore','addStore');
+            Route::put('updateStore','updateStore');
+        });
+        Route::prefix('providers')->middleware('UseProviders')->controller(ProvidersController::class)->group(function(){
+            Route::get('index','getProviders');
+            Route::post('create','create');
+            Route::post('update','update');
+        });
+        Route::prefix('Products')->middleware('UseProducts')->controller(ProductController::class)->group(function(){
+            Route::get('index','index');
+            Route::get('getProduct/{product}','getProduct');
         });
     });
 

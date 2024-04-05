@@ -6,7 +6,7 @@ use Closure;
 use App\Models\User;
 use Illuminate\Http\Request;
 
-class UseUsers
+class UseStores
 {
     /**
      * Handle an incoming request.
@@ -17,13 +17,13 @@ class UseUsers
      */
     public function handle(Request $request, Closure $next)
     {
-        $id = $request->query('id');
-        $user = User::find($id)->modules()->where('_module','4f36')->first();
+        // $id = $request->query('id');
+        $id = $request->fixeds->uid;
+        $user = User::find($id)->modules()->where('_module','bc02')->first();
         if($user){
             return $next($request);
         }else{
             return response()->json("OIE PADRINO NO TIENES PERMISO  SAQUESE DE AQUI XD",405);
         }
-
     }
 }

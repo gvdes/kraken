@@ -3,10 +3,10 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use App\Models\User;
 use Illuminate\Http\Request;
+use App\Models\User;
 
-class UseUsers
+class UseProducts
 {
     /**
      * Handle an incoming request.
@@ -17,13 +17,12 @@ class UseUsers
      */
     public function handle(Request $request, Closure $next)
     {
-        $id = $request->query('id');
-        $user = User::find($id)->modules()->where('_module','4f36')->first();
+        $id = $request->fixeds->uid;
+        $user = User::find($id)->modules()->where('_module','c48e')->first();
         if($user){
             return $next($request);
         }else{
             return response()->json("OIE PADRINO NO TIENES PERMISO  SAQUESE DE AQUI XD",405);
         }
-
     }
 }

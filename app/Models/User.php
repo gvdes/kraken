@@ -17,6 +17,8 @@ class User extends Model
 
     public function stores(){ return $this->belongsToMany('App\Models\Store','user_stores','_user','_store'); }
 
+    public function useStore(){ return $this->hasMany('App\Models\UserStores','_user');}
+
     public function modules(){ return $this->hasMany('App\Models\UserModules','_user'); }
 
     // public function permissions(){ return $this->hasMany('App\Models\UserPermissions','_user'); }
