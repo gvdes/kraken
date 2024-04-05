@@ -14,4 +14,12 @@ class ProductLocation extends Model
     public function warehouse(){
         return $this->hasOneThrough("App\Models\Warehouse","App\Models\Location","id","id","_location","_warehouse");
     }
+
+    public function product(){
+        return $this->belongsTo("App\Models\Product","_product","id");
+    }
+
+    public function location(){
+        return $this->belongsTo("App\Models\Location", "_location", "id");
+    }
 }
