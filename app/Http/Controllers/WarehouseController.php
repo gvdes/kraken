@@ -346,4 +346,20 @@ class WarehouseController extends Controller
 
         return [ "rep"=>$rep, "name"=>$name, "rows"=>$data ];
     }
+
+    public function setminmaxstate(Request $request){
+
+        $wid = $request->route('wid');
+        $product = $request->product;
+        $min = $request->min;
+        $max = $request->max;
+        $state = $request->state;
+
+        $update = ProductStock::where([ ["_warehouse", $wid], ["_product", $product] ])
+            ->update(["_min"=>$min,"_max"=>$max,"_state"=>$state]);
+
+        $row = ProductStock::with(["state"])->where([ ["_warehouse", $wid], ["_product", $product] ])->first();
+
+        return response()->json(["update"=>$update,"row"=>$row]);
+    }
 }

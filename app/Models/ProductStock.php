@@ -10,6 +10,7 @@ class ProductStock extends Model
     use HasFactory;
 
     protected $table = 'product_stock';
+    public $timestamps = false;
 
     public function warehouse(){
         return $this->belongsTo('App\Models\Warehouse','_warehouse','id');
