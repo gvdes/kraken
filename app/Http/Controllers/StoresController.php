@@ -17,23 +17,18 @@ use Illuminate\Support\Facades\Http;
 class StoresController extends Controller
 {
     public function getStores(Request $request){
-        $tipo = $request->query('type');
         $stores = Store::with('storeSeasons','state','type','price','users.rol.area')->get();
         $states = StoreStates::all();
         $types = StoreTypes::all();
         $prices = PricesTypes::all();
         $seasons = Seasons::all();
         $res = [
+            "stores"=>$stores,
             "states"=>$states,
             "types"=>$types,
             "prices"=>$prices,
             "seasons"=>$seasons,
         ];
-        if($tipo == 1){
-            $res['stores'] = $this->Pings($stores);
-        }else{
-            $res['stores'] = $stores;
-        }
         return response()->json($res,200);
 }
 
@@ -63,7 +58,7 @@ class StoresController extends Controller
     public function Pings($stores){
         foreach($stores as $store){
             try{
-                $url = $store['local_domain'].':'.$store['local_port'].'/Addicted/public/api/resources/ping';
+                $url = $store['local_domain'].':'.$store['local_port'].'/addicted/public/api/resources/ping';
                 $ping = Http::timeout(1)->get($url);
                 if($ping->status() == 200){
                     $store['ping'] = true;

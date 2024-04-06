@@ -13,4 +13,19 @@ class ProductCategory extends Model
     public function category(){
         return $this->belongsTo('\App\Modles\ProductCategory');
     }
+    public function products()
+    {
+        return $this->hasMany('App\Models\Product', '_category');
+    }
+
+    public function familia()
+    {
+        return $this->belongsTo(ProductCategory::class, 'root');
+    }
+
+    public function seccion()
+    {
+        return $this->belongsTo(ProductCategory::class, 'root');
+    }
+
 }
