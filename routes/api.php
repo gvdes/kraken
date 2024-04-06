@@ -14,6 +14,8 @@ use App\Http\Controllers\RestockController;
 use App\Http\Controllers\VmediaController;
 use App\Http\Controllers\UsersController;
 use App\Http\Controllers\StoresController;
+use App\Http\Controllers\ProvidersController;
+use App\Http\Controllers\ProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -126,6 +128,15 @@ Route::middleware('kraken')->group(function(){
             Route::get('index','getStores');
             Route::post('addStore','addStore');
             Route::put('updateStore','updateStore');
+        });
+        Route::prefix('providers')->middleware('UseProviders')->controller(ProvidersController::class)->group(function(){
+            Route::get('index','getProviders');
+            Route::post('create','create');
+            Route::post('update','update');
+        });
+        Route::prefix('Products')->middleware('UseProducts')->controller(ProductController::class)->group(function(){
+            Route::get('index','index');
+            Route::get('getProduct/{product}','getProduct');
         });
     });
 
