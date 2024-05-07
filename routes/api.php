@@ -16,6 +16,7 @@ use App\Http\Controllers\UsersController;
 use App\Http\Controllers\StoresController;
 use App\Http\Controllers\ProvidersController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PreorderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -90,6 +91,13 @@ Route::middleware('kraken')->group(function(){
                     Route::post('/','create');
                     Route::get('/{rid}','find')->where(['rid'=>'[0-9]+']);
                     Route::get('/preview/{rid}','preview')->where(['rid'=>'[0-9]+']);
+                });
+
+
+                Route::prefix('orders')->controller(PreorderController::class)->group(function(){
+                    Route::get('/', 'index');
+                    Route::get('/{oid}', 'getOrder');
+                    Route::post('/createOrder', 'createOrder');
                 });
         });
 
