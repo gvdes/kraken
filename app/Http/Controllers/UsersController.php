@@ -11,8 +11,11 @@ use App\Models\Apps;
 use App\Models\UserApps;
 use App\Models\UserRol;
 use App\Models\UserModules;
+use App\Models\ModuleApp;
+use App\Models\Permission;
 use App\Models\UserStates;
 use App\Models\UserLog;
+use App\Models\RolDefaultPermission;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
@@ -266,4 +269,53 @@ class UsersController extends Controller
 
         }
     }
+
+    public function getPosition(){
+        $roles = Area::with('roles.permissions')->get();
+        $modules = ModuleApp::with('children.children')->where('deep',0)->get();
+        $permissions = Permission::all();
+
+        $res = [
+            "areas"=>$roles,
+            "modules"=>$modules,
+            "permissions"=>$permissions
+        ];
+        return response()->json($res,200);
+    }
+
+    public function addArea(Request $request){
+        $area = Area::create($request->all());
+        $res = $area->fresh(['roles'])->toArray();
+        return response()->json($res,200);
+    }
+
+    public function addPuesto(Request $request){
+        $area = UserRol::create($request->rol);
+        $res = $area->fresh(['area'])->toArray();
+        if($res){
+            $permi = $request->permissions;
+            foreach($permi as $permis){
+                $ins [] = [
+                    "_rol"=>$res['id'],
+                    "_permission"=>$permis['_permission']['id'],
+                    "_module"=>$permis['id']
+                ];
+            }
+            $roles  = RolDefaultPermission::insert($ins);
+            if($roles){
+                return response()->json($res,200);
+            }else{ return response()->json('Hubo un problema con los permissos');}
+        }
+    }
+
+    public function getPermissionsRol(Request $request){
+        $permissions = UserRol::with('permissions')->where('id',$request->id)->get();
+        if($permissions){
+            return response()->json($permissions,200);
+        }else{
+            return response()->json([],200);
+        }
+
+    }
+
 }

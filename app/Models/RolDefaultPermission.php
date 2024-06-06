@@ -9,4 +9,7 @@ class RolDefaultPermission extends Model
 {
     protected $table = 'role_default_permissions';
 
+    protected $fillable = ['_rol','_permission','_module'];
+    public $timestamps = false;
+
 }

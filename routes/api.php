@@ -97,7 +97,10 @@ Route::middleware('kraken')->group(function(){
                 Route::prefix('orders')->controller(PreorderController::class)->group(function(){
                     Route::get('/', 'index');
                     Route::get('/{oid}', 'getOrder');
+                    Route::get('getOrderforuser', 'getOrderforuser');
+                    Route::post('/getOrders', 'getOrders');
                     Route::post('/createOrder', 'createOrder');
+                    Route::post('/addProduct', 'addProduct');
                 });
         });
 
@@ -129,9 +132,13 @@ Route::middleware('kraken')->group(function(){
             Route::get('users','getUsers');
             Route::get('getIndex','getIndex');
             Route::get('getUserWor','getUserWorkpoint');
+            Route::get('getPosition','getPosition');
+            Route::get('getPermissionsRol/{id}','getPermissionsRol');
             Route::put('changework','changeWork');
             Route::post('updateuser','updateUser');
             Route::post('adduser','addUser');
+            Route::post('addArea','addArea');
+            Route::post('addPuesto','addPuesto');
         });
         Route::prefix('stores')->middleware('UseStores')->controller(StoresController::class)->group(function(){
             Route::get('index','getStores');

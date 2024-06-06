@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 class Area extends Model
 {
     protected $table = 'user_areas';
+    protected $fillable = ['name'];
+    public $timestamps = false;
+
 
     public function roles(){ return $this->hasMany('App\Models\UserRol','_area','id'); }
 

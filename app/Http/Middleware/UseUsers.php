@@ -17,7 +17,7 @@ class UseUsers
      */
     public function handle(Request $request, Closure $next)
     {
-        $id = $request->query('id');
+        $id = $request->fixeds->uid;
         $user = User::find($id)->modules()->where('_module','4f36')->first();
         if($user){
             return $next($request);

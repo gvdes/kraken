@@ -5,17 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductAdditionalBarcode;
 use App\Models\Warehouse;
+use App\Models\Store;
 use Illuminate\Http\Request;
 
 class ProductFinder extends Controller
 {
     public function __invoke(Request $request){
         $store = $request->route('sid'); // tienda sobre la que se obtendra el o los almacenes
+        $suc = Store::find($store); // obtiene la sucursal
         $key = $request->query('key'); // clave a buscar
         $withStocks = json_decode($request->query('stock')); // define el/los almacen/es sobre los que se trabajara
         $withLocations = json_decode($request->query('locations')); // define si incluiremos las ubicaciones sobre el/los almacen/es
         $withMedia = json_decode($request->query('media')); // define si incluiremos los precios del producto
         $withPrices = json_decode($request->query('prices')); // define si incluiremos los precios del producto
+        $withCategories = json_decode($request->query('categories')); // define si incluiremos los precios del producto
         $withRelateds = json_decode($request->query('relateds')); // define si incluiremos las ubicaciones sobre el/los almacen/es
         $onWrhs = null;
 
@@ -28,6 +31,7 @@ class ProductFinder extends Controller
         // busca coincidencias del producto a localizar entre el codigo y el codigo corto
             $items = Product::where( fn($q) => $q->where("code","LIKE","%$key%")->orWhere("short_code","LIKE","%$key%") )
                         ->with('state')
+                        ->with('measure')
                         ->limit(100)
                         ->get();
 
@@ -57,6 +61,11 @@ class ProductFinder extends Controller
 
                 // agrega los codigos relacionados
                 if($withRelateds){$items->load([ 'relateds' ]); }
+
+                // agrega los precios del tipo requerido
+                if($withPrices){$items->load(['prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type)]);}
+                //categories
+                if($withCategories){$items->load(['category.familia.seccion']);}
             }
 
         return response()->json([
@@ -64,6 +73,7 @@ class ProductFinder extends Controller
             "items" => $items,
             "withLocations" => $withLocations,
             "withPrices" => $withPrices,
+            "withCategories" => $withPrices,
             "withMedia" => $withMedia,
             "onWarehouses" => $onWrhs,
         ]);
