@@ -126,11 +126,31 @@ class PreorderController extends Controller
 
     public function addProduct(Request $request){
         $order = OrderBodie::create($request->all());
+        $store = $request->route('sid');
+        $suc = Store::find($store); // obtiene la sucursal
+        $onWrhs = $request->query('warehouses') ?
+        explode(",",$request->query('warehouses')) :
+        Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
         if($order){
-            $bodie = OrderBodie::with(['product.category.familia.seccion','unitsupply','rates'])->where([['_product',$request->_product],['_order',$request->_order]])->first();
+            $bodie = OrderBodie::with([
+                'product.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
+                'product.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
+                'product.measure',
+                'product.category.familia.seccion',
+                'unitsupply',
+                'rates'])->where([['_product',$request->_product],['_order',$request->_order]])->first();
             return $bodie;
         }else{
             return response()->json('No se pudo agregar el producto',401);
+        }
+    }
+
+    public function removeProduct(Request $request){
+        $bodie = OrderBodie::where([['_product',$request->_product],['_order',$request->_order]])->delete();
+        if($bodie){
+            return response()->json($bodie,200);
+        }else{
+            return response()->json('Se ocaciono un problema al eliminar el articulo',500);
         }
     }
 }

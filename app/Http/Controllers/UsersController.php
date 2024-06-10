@@ -297,7 +297,7 @@ class UsersController extends Controller
             foreach($permi as $permis){
                 $ins [] = [
                     "_rol"=>$res['id'],
-                    "_permission"=>$permis['_permission']['id'],
+                    "_permission"=>$permis['_permission'],
                     "_module"=>$permis['id']
                 ];
             }
@@ -309,7 +309,7 @@ class UsersController extends Controller
     }
 
     public function getPermissionsRol(Request $request){
-        $permissions = UserRol::with('permissions')->where('id',$request->id)->get();
+        $permissions = UserRol::with('permissions')->where('id',$request->id)->first();
         if($permissions){
             return response()->json($permissions,200);
         }else{
@@ -317,5 +317,83 @@ class UsersController extends Controller
         }
 
     }
+
+    public function modifyPuesto(Request $request){
+        $rol = UserRol::find($request->rol['id']);
+        if ($rol) {
+            $rol->name = $request->rol['name'];
+            $rol->description = $request->rol['description'];
+            $res = $rol->save();
+
+            if ($res) {
+                // Eliminar permisos existentes del rol
+                RolDefaultPermission::where('_rol', $request->rol['id'])->delete();
+
+                // Obtener nuevos permisos
+                $ins = $this->permissions($request->rol['id'], $request->permissions);
+                // Filtrar permisos que no sean 0
+                $permisos = array_filter($ins, function ($val) {
+                    return $val['_permission'] !== 0;
+                });
+
+                // Insertar nuevos permisos
+                $roles = RolDefaultPermission::insert($permisos);
+
+                if ($roles) {
+                    // Obtener usuarios con el rol actualizado
+                    $users = User::where('_rol', $request->rol['id'])->get();
+                    if ($users) {
+                        foreach ($users as $user) {
+                            // Eliminar módulos de usuario existentes
+                            UserModules::where('_user', $user->id)->delete();
+
+                            // Crear nuevos módulos de usuario basados en los nuevos permisos
+                            $userper = array_map(function ($val) use ($user) {
+                                return [
+                                    '_user' => $user->id,
+                                    '_permission' => $val['_permission'],
+                                    '_module' => $val['_module']
+                                ];
+                            }, $permisos);
+
+                            // Insertar nuevos módulos de usuario
+                            $insertar = UserModules::insert($userper);
+
+                            if ($insertar) {
+                                // Actualizar el estado del usuario
+                                $modify = User::find($user->id);
+                                $modify->_state = 5;
+                                $modify->save();
+                            }
+                        }
+                    }
+                    return response()->json($roles, 200);
+                } else {
+                    return response()->json('Hubo un problema con los permisos', 500);
+                }
+            } else {
+                return response()->json('Hubo un problema al actualizar el rol', 500);
+            }
+        } else {
+            return response()->json('Rol no encontrado', 404);
+        }
+    }
+
+    public function permissions($id, $permissions){
+        static $ins = [];
+        // $del = RolDefaultPermission::where('_rol',$id)->delete();
+        foreach($permissions as $permis){
+            $ins [] = [
+                "_rol"=>$id,
+                "_permission"=>$permis['_permission'],
+                "_module"=>$permis['id']
+            ];
+            if(isset($permis['children']) && count($permis['children']) > 0){
+                $this->permissions($id,$permis['children']);
+            }
+        }
+        return $ins;
+    }
+
 
 }

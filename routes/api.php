@@ -101,6 +101,7 @@ Route::middleware('kraken')->group(function(){
                     Route::post('/getOrders', 'getOrders');
                     Route::post('/createOrder', 'createOrder');
                     Route::post('/addProduct', 'addProduct');
+                    Route::post('/removeProduct', 'removeProduct');
                 });
         });
 
@@ -139,6 +140,7 @@ Route::middleware('kraken')->group(function(){
             Route::post('adduser','addUser');
             Route::post('addArea','addArea');
             Route::post('addPuesto','addPuesto');
+            Route::post('modifyPuesto','modifyPuesto');
         });
         Route::prefix('stores')->middleware('UseStores')->controller(StoresController::class)->group(function(){
             Route::get('index','getStores');
