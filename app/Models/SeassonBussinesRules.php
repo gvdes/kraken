@@ -5,8 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class OrderState extends Model
+class SeassonBussinesRules extends Model
 {
-    protected $table = "order_states";
-
+    protected $table = 'seasson_business_rules';
 }

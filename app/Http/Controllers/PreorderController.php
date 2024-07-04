@@ -10,7 +10,12 @@ use App\Models\UnitMeassure;
 use App\Models\Warehouse;
 use App\Models\OrderLog;
 use App\Models\OrderBodie;
+use App\Models\Seasons;
+use App\Models\SeassonBussinesRules;
+use App\Models\Printer;
+use App\Models\OrderStateConfig;
 use Carbon\Carbon;
+
 
 
 class PreorderController extends Controller
@@ -54,10 +59,12 @@ class PreorderController extends Controller
             'bodie.unitsupply',
             'bodie.rates'])->where([['id',$id],['_store',$store]])->first();
         $units = UnitMeassure::all();
+        $rules = Seasons::with('rules')->get();
         if($order){
             $res = [
                 "unit_measures"=>$units,
-                "order"=>$order
+                "order"=>$order,
+                "rules"=>$rules
             ];
             return response()->json($res,200);
         }else{
@@ -71,7 +78,28 @@ class PreorderController extends Controller
         return response()->json($orders,200);
     }
 
+    public function getConfig(Request $request){
+        $store = $request->route('sid');
+        $configs = OrderStateConfig::with('state')->where('_store',$store)->get();
+        if($configs){
+            return response()->json($configs);
+        }else{
+            return response()->json('No hay configuraciones',500);
+        }
+    }
+
+    public function changeConfig(Request $request){
+        $config = OrderStateConfig::where([['_state_order',$request->_state_order],['_store',$request->route('sid')]])
+        ->update(['active'=>$request->active]);
+        if($config == 1){
+            return response()->json($request->all());
+        }else{
+            return response()->json('No se pudo cambiar el status',401);
+        }
+    }
+
     public function createOrder(Request $request){
+        $ip = $request->ip();
         $store = $request->route('sid');
         $user = $request->fixeds->uid;
         $order = Order::max('id') + 1;
@@ -80,17 +108,6 @@ class PreorderController extends Controller
         $typelog = 1;
         $client = $request->_client;
         $name = $request->name;
-        $log = [
-            "details"=>json_encode([
-                "name"=>$name,
-                "client"=>$client,
-                "store"=>$store
-            ]),
-            "_state"=>$status,
-            "_order"=>$order,
-            "_user"=>$user,
-            "_type"=>$typelog
-        ];
         $listor = [
             "id"=>$order,
             "_client"=>$client,
@@ -103,12 +120,12 @@ class PreorderController extends Controller
         ];
         $insOr = Order::insert($listor);
         if($insOr){
-            $savelog = $this->logs($log);
+            $norder = Order::with('user','state')->where('id',$order)->first();
+            $savelog = $this->createLog($status, $typelog, $norder,$ip);
             if($savelog){
-                $norder = Order::with('user','state')->where('id',$order)->first();
                 return response()->json($norder);
             }else{
-                return response()->json("No se Genero el log",500);
+                return response()->json('No se genero el log',500);
             }
         }else{
             return response()->json("No se pudo crear el pedido bro",500);
@@ -116,13 +133,7 @@ class PreorderController extends Controller
 
     }
 
-    public function logs($log){
-        $max = OrderLog::max('id') + 1;
-        $log['id'] = $max;
-        $inslog = OrderLog::insert($log);
-        $res = $inslog ? true : false;
-        return $res;
-    }
+
 
     public function addProduct(Request $request){
         $order = OrderBodie::create($request->all());
@@ -145,6 +156,39 @@ class PreorderController extends Controller
         }
     }
 
+    public function ModifyProduct(Request $request){
+        $order = OrderBodie::where([['_order',$request->_order],['_product',$request->_product]])
+        ->update([
+            'amount_require' => $request->amount_require,
+            'notes' => $request->notes,
+            'price' => $request->price,
+            'total' => $request->total,
+            'units' => $request->units,
+            '_rate' => $request->_rate,
+            '_state' => $request->_state,
+            '_supply_by' => $request->_supply_by
+        ]);
+
+
+        $store = $request->route('sid');
+        $suc = Store::find($store); // obtiene la sucursal
+        $onWrhs = $request->query('warehouses') ?
+        explode(",",$request->query('warehouses')) :
+        Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
+        if($order){
+            $bodie = OrderBodie::with([
+                'product.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
+                'product.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
+                'product.measure',
+                'product.category.familia.seccion',
+                'unitsupply',
+                'rates'])->where([['_product',$request->_product],['_order',$request->_order]])->first();
+            return $bodie;
+        }else{
+            return response()->json('No se pudo modificar el producto',401);
+        }
+    }
+
     public function removeProduct(Request $request){
         $bodie = OrderBodie::where([['_product',$request->_product],['_order',$request->_order]])->delete();
         if($bodie){
@@ -152,5 +196,127 @@ class PreorderController extends Controller
         }else{
             return response()->json('Se ocaciono un problema al eliminar el articulo',500);
         }
+    }
+
+    public function changeStatus(Request $request){
+        $order = Order::with(
+            'store',
+            'user',
+            'state',
+            'bodie.product.category.familia.seccion',
+            'bodie.rates')->where('id',$request->id)->first();
+        $status = $request->_state + 1;
+        $printer = isset($request->printer) ? $request->printer : null ;
+        $typelog = $request->typelog;
+        $ip = $request->ip();
+        $create_log = $this->createLog($status, $typelog, $order, $ip, $printer);
+        if($create_log){
+            $order->_state = $create_log;
+            $order->save();
+            $res =$order->load(['store',
+            'user',
+            'state',
+            'bodie.product.category.familia.seccion',
+            'bodie.rates']);
+
+            return response()->json($res);
+        }else{
+            return response()->json('No se genero el log :(',400);
+        }
+
+
+    }
+
+    public function getPrints(Request $request){
+        $store = $request->route('sid');
+        $type = $request->route('type');
+        $printers = Printer::where([['_store',$store],['_type',$type]])->get();
+        return response()->json($printers,200);
+    }
+
+    public function createLog($_status, $typelog,$order, $ip, $print = null){
+        $store = $order->_store;
+        $user = $order->_created_by;
+        $status = $_status;
+        $client = $order->_client;
+        $name = $order->name;
+
+        $log = [
+            "details"=>json_encode([
+                "name"=>$name,
+                "client"=>$client,
+                "store"=>$store,
+                "ip_device"=>$ip
+            ]),
+            "_state"=>$status,
+            "_order"=>$order->id,
+            "_user"=>$user,
+            "_type"=>$typelog
+        ];
+
+
+        $create_log = null;
+        switch($status){
+            case 1://levantando pedido
+                $create_log= $this->logs($log);
+            break;
+            case 2://Recepcion
+                $validate = $this->verifyProcess($status,$store);
+                if($validate){
+                    $create_log= $this->logs($log);
+                    $printer = Printer::find($print);
+                    $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
+                    $cellerPrinter->CliOrder($order,$status);
+                    break;
+                }else{
+                    $status = 3;
+                    $log['_state'] = 3;
+                }
+            case 3://Por Surtir
+                $validate = $this->verifyProcess($status,$store);
+                if($validate){
+                    $create_log= $this->logs($log);
+                    $printer = Printer::find($print);
+                    $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
+                    $cellerPrinter->CliOrder($order,$status);
+                    break;
+                }else{
+                    $status = 4;
+                    $log['_state'] = 4;
+                }
+            case 4://surtiendo
+                $create_log= $this->logs($log);
+                $printer = Printer::find($print);
+                $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
+                $cellerPrinter->CliOrder($order,$status);
+            break;
+            case 5:
+
+            break;
+
+        }
+
+        return $status;
+    }
+
+    public function logs($log){
+        $max = OrderLog::max('id') + 1;
+        $log['id'] = $max;
+        $inslog = OrderLog::insert($log);
+        $res = $inslog ? true : false;
+        return $res;
+    }
+
+    public function verifyProcess($_status,$_store){
+        $process = OrderStateConfig::where([['_state_order',$_status],['_store',$_store]])->first();
+        if($process->active == 1){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    public function selectCash($store){
+
     }
 }

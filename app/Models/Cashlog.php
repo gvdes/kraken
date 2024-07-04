@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class OrderState extends Model
+class Cashlog extends Model
 {
-    protected $table = "order_states";
-
+    protected $table = "cash_logs";
+    public $timestamps = false;
 }

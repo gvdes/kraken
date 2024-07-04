@@ -17,6 +17,9 @@ use App\Http\Controllers\StoresController;
 use App\Http\Controllers\ProvidersController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PreorderController;
+use App\Http\Controllers\AssistController;
+use App\Http\Controllers\CashController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -96,12 +99,21 @@ Route::middleware('kraken')->group(function(){
 
                 Route::prefix('orders')->controller(PreorderController::class)->group(function(){
                     Route::get('/', 'index');
-                    Route::get('/{oid}', 'getOrder');
+                    Route::get('/getConfig', 'getConfig');
                     Route::get('getOrderforuser', 'getOrderforuser');
+                    Route::get('/getPrints/{type}', 'getPrints');
+                    Route::get('/{oid}', 'getOrder');
                     Route::post('/getOrders', 'getOrders');
                     Route::post('/createOrder', 'createOrder');
                     Route::post('/addProduct', 'addProduct');
+                    Route::post('/ModifyProduct', 'ModifyProduct');
                     Route::post('/removeProduct', 'removeProduct');
+                    Route::post('/changeStatus','changeStatus');
+                    Route::post('/changeConfig','changeConfig');
+
+                });
+                Route::prefix('cash')->controller(CashController::class)->group(function(){
+                    Route::get('/getCash', 'getCash');
                 });
         });
 
@@ -155,6 +167,14 @@ Route::middleware('kraken')->group(function(){
         Route::prefix('Products')->middleware('UseProducts')->controller(ProductController::class)->group(function(){
             Route::get('index','index');
             Route::get('getProduct/{product}','getProduct');
+        });
+        Route::prefix('Assist')->middleware('UseAssist')->controller(AssistController::class)->group(function(){
+            Route::get('index','index');
+            Route::get('new','new');
+            Route::get('pingNew/{d}','pingNew');
+            Route::get('ping/{d}','ping');
+            Route::post('edit','edit');
+            Route::post('addDevice','addDevice');
         });
     });
 

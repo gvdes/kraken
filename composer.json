@@ -11,6 +11,7 @@
         "laravel/sanctum": "^3.0",
         "laravel/tinker": "^2.7",
         "mike42/escpos-php": "^4.0",
+        "rats/zkteco": "^002.0",
         "twilio/sdk": "^6.44"
     },
     "require-dev": {
