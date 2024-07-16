@@ -14,6 +14,7 @@ use App\Models\Seasons;
 use App\Models\SeassonBussinesRules;
 use App\Models\Printer;
 use App\Models\OrderStateConfig;
+use App\Models\CashRegister;
 use Carbon\Carbon;
 
 
@@ -132,8 +133,6 @@ class PreorderController extends Controller
         }
 
     }
-
-
 
     public function addProduct(Request $request){
         $order = OrderBodie::create($request->all());
@@ -265,8 +264,13 @@ class PreorderController extends Controller
                 if($validate){
                     $create_log= $this->logs($log);
                     $printer = Printer::find($print);
+                    $cash = $this->selectCash($store);
+                    $cashier = CashRegister::find($cash);
+                    $order = Order::find($order->id);
+                    $order->_cash = $cashier->id;
+                    $order->save();
                     $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
-                    $cellerPrinter->CliOrder($order,$status);
+                    $cellerPrinter->CliOrder($order,$status,$cashier);
                     break;
                 }else{
                     $status = 3;
@@ -277,8 +281,13 @@ class PreorderController extends Controller
                 if($validate){
                     $create_log= $this->logs($log);
                     $printer = Printer::find($print);
+                    $cash = $this->selectCash($store);
+                    $cashier = CashRegister::find($cash);
+                    $order = Order::find($order->id);
+                    $order->_cash = $cashier->id;
+                    $order->save();
                     $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
-                    $cellerPrinter->CliOrder($order,$status);
+                    $cellerPrinter->CliOrder($order,$status,$cashier);
                     break;
                 }else{
                     $status = 4;
@@ -287,8 +296,13 @@ class PreorderController extends Controller
             case 4://surtiendo
                 $create_log= $this->logs($log);
                 $printer = Printer::find($print);
+                $cash = $this->selectCash($store);
+                $cashier = CashRegister::find($cash);
+                $order = Order::find($order->id);
+                $order->_cash = $cashier->id;
+                $order->save();
                 $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
-                $cellerPrinter->CliOrder($order,$status);
+                $cellerPrinter->CliOrder($order,$status,$cashier);
             break;
             case 5:
 
@@ -317,6 +331,15 @@ class PreorderController extends Controller
     }
 
     public function selectCash($store){
-
+        $cashs = CashRegister::where([['_store',$store],['_state',1]])->get();
+        $cashi = [];
+        foreach($cashs as $cash){
+            $order = Order::whereDate('created_at',date('Y-m-d'))->where([['_cash',$cash->id],['_state','<=',5]])->count();
+            $cashi[$cash->id] = $order;
+        }
+        $valmin =  min($cashi);
+        $mininx = array_search($valmin, $cashi);
+        return $mininx;
     }
+
 }

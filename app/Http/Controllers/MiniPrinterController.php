@@ -44,7 +44,7 @@ class MiniPrinterController extends Controller
         $printer->close();
         return true;
     }
-    public function CliOrder($order,$status){
+    public function CliOrder($order,$status,$cash){
         $encabezado = $status == 2 ? 'Favor de escanear el pedido' : 'Favor de esperar su turno';
         $printer = $this->printer;
         if(!$printer){
@@ -67,14 +67,14 @@ class MiniPrinterController extends Controller
         }
         $printer->setTextSize(1,2);
         $printer->setJustification(Printer::JUSTIFY_CENTER);
-        $printer->text($order->name."\n");
         $printer->text($encabezado."\n");
+        $printer->text("Gracias por su pedido ".$order->name.", te esperamos en"."\n");
         $printer->setJustification(Printer::JUSTIFY_CENTER);
         $printer->setTextSize(1,1);
         $printer->text("--------------------------------------------\n");
         $printer->setTextSize(1,2);
         $printer->setEmphasis(true);
-        $printer->text("Pedido: ".$order->id." \n");
+        $printer->text("--".$cash->name."--" ." \n");
         $printer->setEmphasis(false);
         $printer->setTextSize(1,1);
         $printer->text("--------------------------------------------\n");

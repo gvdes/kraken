@@ -114,6 +114,14 @@ Route::middleware('kraken')->group(function(){
                 });
                 Route::prefix('cash')->controller(CashController::class)->group(function(){
                     Route::get('/getCash', 'getCash');
+                    Route::post('/OpenCash', 'OpenCash');
+                });
+                Route::prefix('rrhh')->controller(AssistController::class)->group(function(){
+                    Route::get('/justifications', 'Index');
+                    Route::get('/form', 'form');
+                    Route::post('/addFile', 'addFile');
+                    Route::post('/addForm', 'addForm');
+
                 });
         });
 
@@ -171,10 +179,15 @@ Route::middleware('kraken')->group(function(){
         Route::prefix('Assist')->middleware('UseAssist')->controller(AssistController::class)->group(function(){
             Route::get('index','index');
             Route::get('new','new');
+            Route::get('getJustifications','getJustifications');
             Route::get('pingNew/{d}','pingNew');
             Route::get('ping/{d}','ping');
             Route::post('edit','edit');
             Route::post('addDevice','addDevice');
+            Route::post('changeStatus','changeStatus');
+
+
+
         });
     });
 

@@ -170,7 +170,7 @@ class UsersController extends Controller
 
     public function getUserWorkpoint(){
 
-        $users = User::with('rol','rol.area')->whereHas('rol.area', function($q){
+        $users = User::with('store','rol','rol.area')->whereHas('rol.area', function($q){
             $q->whereIn('id',[15,16,17]);
         })->get();
         $branches = Store::whereNotIn('id',[17,18])->get();
@@ -197,16 +197,16 @@ class UsersController extends Controller
                     $res = "Cambio Usuario Realizado";
                     return response()->json($res,200);
                 }else{
-                    $res = "No se pudo actualizar el usuario";
-                    return response()->json($res,404);
+                    $res = "No se logro actualizar el Store principal de el usuario";
+                    return response()->json($res,500);
                 }
             }else{
-                $res = "No se pudo actualizar el usuario";
-                return response()->json($res,404);
+                $res = "No se logro modificar el Store de el usuario";
+                return response()->json($res,500);
             }
         }else {
-            $res = "No se pudo actualizar el usuario";
-            return response()->json($res,404);
+            $res = "No se actualizo el Store actual de el usuario";
+            return response()->json($res,500);
         }
     }
 
