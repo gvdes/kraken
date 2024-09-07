@@ -19,6 +19,8 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PreorderController;
 use App\Http\Controllers\AssistController;
 use App\Http\Controllers\CashController;
+use App\Http\Controllers\IndicatorController;
+
 
 
 /*
@@ -62,6 +64,8 @@ Route::middleware('kraken')->group(function(){
                         Route::get('products','products');
                         Route::get('resume','resume');
                         Route::post('setminmaxstate','setminmaxstate');
+                        Route::get('comparator','comparator');
+                        Route::post('comparator/{vswid}','comparator_start')->where([ 'vswid' => '[0-9]+' ]);
                         Route::get('report/{repid}','report')->where([ 'repid' => '[0-9]+' ]);
 
                         Route::prefix('section/{lid}')
@@ -72,6 +76,12 @@ Route::middleware('kraken')->group(function(){
                                 Route::post('structure','sectionate');
                                 Route::get('resume','resume');
                         });
+                        Route::prefix('comparatool')
+                            ->controller(ComparatorWarehouse::class)
+                            ->group(function(){
+                                Route::get('','index');
+                                Route::get('report/{repid}','report');
+                            });
                 });
             });
 
@@ -138,6 +148,9 @@ Route::middleware('kraken')->group(function(){
             });
     });
 
+    Route::prefix('resp/form')->controller(IndicatorController::class)->group(function(){
+        Route::get('/{form}','getFormResp');
+    });
     Route::prefix('cluster')
     // ->middleware('cluster')
     ->group(function(){
@@ -185,10 +198,20 @@ Route::middleware('kraken')->group(function(){
             Route::post('edit','edit');
             Route::post('addDevice','addDevice');
             Route::post('changeStatus','changeStatus');
-
-
-
         });
+        Route::prefix('Indicators')->middleware('UseIndicator')->controller(IndicatorController::class)->group(function(){
+            Route::get('index','index');
+            Route::get('getForms','getForms');
+            Route::get('/{form}', 'getForm');
+            Route::post('addForm','addForm');
+            Route::post('addQuestion','addQuestion');
+        });
+        Route::prefix('Indicators')->controller(IndicatorController::class)->group(function(){
+            Route::get('getForms','getForms');
+            Route::get('getForm/{form}','getFormResp');
+        });
+
+
     });
 
     Route::prefix('vmedia')

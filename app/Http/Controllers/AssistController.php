@@ -108,7 +108,6 @@ class AssistController extends Controller
         $justification->notes = $jstf['notes'];
         $justification->evidence = $jstf['evidence'];
         $justification->save();
-
         $res = $justification->fresh()->toArray();
         if($res){
             return response()->json($res,200);

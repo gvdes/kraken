@@ -71,7 +71,7 @@ class Kernel extends HttpKernel
         'UseProviders' => \App\Http\Middleware\UseProviders::class,
         'UseProducts' => \App\Http\Middleware\UseProducts::class,
         'UseAssist' => \App\Http\Middleware\UseAssist::class,
-
+        'UseIndicator' => \App\Http\Middleware\UseIndicator::class,
 
     ];
 }
