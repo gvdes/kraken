@@ -23,12 +23,12 @@ class Product extends Model
 
     public function unitsupply(){ return $this->hasOne('App\Models\UnitMeassure','id','_assortment_unit'); }
 
-    public function media(){ return $this->hasMany('App\Models\ProductMedia','_product','id'); }
+    public function category(){ return $this->hasOne('App\Models\ProductCategory','id','_category'); }
 
-    public function category(){return $this->belongsTo('App\Models\ProductCategory', '_category');}
+    public function media(){ return $this->hasMany('App\Models\ProductMedia','_product','id'); }
 
     public function provider(){ return $this->hasOne('App\Models\Provider','id','_state'); }
 
     public function Prices(){ return $this->hasMany('App\Models\ProductPrices','_product','id'); }
 
-    }
+}

@@ -14,6 +14,8 @@ use App\Http\Controllers\Elo;
 |
 */
 
-Route::prefix('elo')->controller(Elo::class)->group(function () {
-    Route::get('/', 'index');
-});
+// Route::prefix('elo')->controller(Elo::class)->group(function () {
+//     Route::get('/');
+// });
+
+Route::get('/elo', Elo::class);

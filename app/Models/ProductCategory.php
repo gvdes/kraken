@@ -7,8 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductCategory extends Model
 {
+    use HasFactory;
     protected $table = 'product_categories';
 
+    public function category(){
+        return $this->belongsTo('\App\Modles\ProductCategory');
+    }
     public function products()
     {
         return $this->hasMany('App\Models\Product', '_category');
@@ -24,7 +28,5 @@ class ProductCategory extends Model
         return $this->belongsTo(ProductCategory::class, 'root');
     }
 
-
-
-
 }
+

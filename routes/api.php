@@ -16,6 +16,7 @@ use App\Http\Controllers\UsersController;
 use App\Http\Controllers\StoresController;
 use App\Http\Controllers\ProvidersController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ComparatorWarehouse;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,6 +58,9 @@ Route::middleware('kraken')->group(function(){
                         Route::post('structure','sectionate');
                         Route::get('products','products');
                         Route::get('resume','resume');
+                        Route::post('setminmaxstate','setminmaxstate');
+                        Route::get('comparator','comparator');
+                        Route::post('comparator/{vswid}','comparator_start')->where([ 'vswid' => '[0-9]+' ]);
                         Route::get('report/{repid}','report')->where([ 'repid' => '[0-9]+' ]);
 
                         Route::prefix('section/{lid}')
@@ -67,9 +71,14 @@ Route::middleware('kraken')->group(function(){
                                 Route::post('structure','sectionate');
                                 Route::get('resume','resume');
                         });
-                });
 
-                Route::post('/', 'create');
+                        Route::prefix('comparatool')
+                            ->controller(ComparatorWarehouse::class)
+                            ->group(function(){
+                                Route::get('','index');
+                                Route::get('report/{repid}','report');
+                            });
+                });
             });
 
             Route::prefix('locator')
@@ -79,6 +88,8 @@ Route::middleware('kraken')->group(function(){
                     Route::get('location/{loc}', 'location');
                     Route::get('product/{code}', 'product');
                     Route::post('toggle', 'toggle');
+                    Route::post('unlink', 'unlink');
+                    Route::post('truncate', 'truncate');
             });
 
             Route::prefix('restock')
