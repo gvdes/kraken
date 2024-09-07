@@ -15,14 +15,17 @@ class RestockController extends Controller
 {
     public function index(Request $request){
         $sid = $request->route('sid');
-        $_init = $request->query('init');
-        $_end = $request->query('end');
+        $_init = $request->query('init') ? $request->query('init') : Carbon::now();
+        $_end = $request->query('end') ? $request->query('end') : Carbon::now();
 
         $init = Carbon::parse($_init)->startOfDay()->format("Y-m-d H:i:s");
         $end = Carbon::parse($_end)->endOfDay()->format("Y-m-d H:i:s");
 
         $states = RestockStates::all();
-        $stores = Store::where("_type",1)->get();
+        $stores = Store::with([
+            "warehouses" => fn($q) => $q->with(['type']),
+            "type"
+        ])->get();
 
         $orders = RestockOrder::with([ "owner", "state", "fromStore", "toStore" ])
                     ->where(function($q) use($sid){ $q->where("_store_from",$sid)->orWhere("_store_to",$sid); })

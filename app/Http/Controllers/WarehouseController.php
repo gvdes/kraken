@@ -10,6 +10,7 @@ use App\Models\ProductLocation;
 use App\Models\ProductStock;
 use App\Models\WarehouseType;
 use App\Models\StoresSeasons;
+use App\Models\Store;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use PhpParser\Node\Stmt\TryCatch;
@@ -41,22 +42,30 @@ class WarehouseController extends Controller
         $wid = $request->route('wid'); // warehouse id
 
         // obtenemos los datos del almacen con su tienda
+        $warehouse = Warehouse::with([ "type" ])->find($wid);
+
+        // obtenemos los datos de la sucursal con su tipo de sucursal
+        $store = Store::with([ "type" ])->find($sid);
+
+        $resp = [
+            "warehouse" => $warehouse,
+            "store" => $store,
+        ];
+
+        return response()->json($resp);
+    }
+
+    public function products(Request $request){
+        $sid = $request->route('sid'); // store id
+        $wid = $request->route('wid'); // warehouse id
+
+        // obtenemos los datos del almacen con su tienda
             $warehouse = Warehouse::with([ "store" ])->find($wid);
 
-        // obtenemos las temporadas de la tienda con su categoria
-            $seasons = StoresSeasons::with([ "category" ])->where([ ["_store",$sid], ["_state",1] ])->get();
+        $season = $this->season($sid);
 
-        // iteramos las temporadas para obtener las subcategorias de cada una
-            $season_cats = $seasons->map(function($e) {
-                $id = $e->_season; // id de la categoria raiz
-                $children = DB::select('CALL categoriesOf(?)', [$id]); // subcategoriad de la categoria raiz
-                return [ "parent"=>$e, "children"=>$children ];
-            });
-
-        // Creamos la lista completa de las categorias de la temporada
-            $idsp = $season_cats->map(fn($sc) => $sc["parent"]->_season );// ids de las categorias padre
-            $idsc = $season_cats->map(fn($sc) => $sc["children"])->flatten()->map(fn($c) => $c->id);// ids de las categorias hijas
-            $ids_cats = $idsp->merge($idsc); // lista completa de ids de las categorias en las temporadas
+        $season_cats = $season["cats"];
+        $ids_cats = $season["ids"];
 
         // obtenemos los productos en base a las categorias obtenidas arriba
             // $products = Product::whereHas("stocks", function($q) use($wid){ $q->where([ ["_warehouse",$wid],["_state",1], ["_current",">",0] ]); })
@@ -74,15 +83,37 @@ class WarehouseController extends Controller
                         ->get();
 
         // Obtenemos las secciones raiz (estructura) del almacen
-            $sections_warehouse = Location::where([ ["root",0],["_warehouse",$wid] ])->get();
+            // $sections_warehouse = Location::where([ ["root",0],["_warehouse",$wid] ])->get();
 
             return response()->json([
                 "warehouse"=>$warehouse,
                 "products"=>$products,
-                "sections"=>$sections_warehouse,
+                // "sections"=>$sections_warehouse,
                 "seasons_cats"=>$season_cats,
                 "idscats"=>$ids_cats
             ]);
+    }
+
+    private function season($sid){
+        // obtenemos las temporadas de la tienda con su categoria
+        $seasons = StoresSeasons::with([ "category" ])->where([ ["_store",$sid], ["_state",1] ])->get();
+
+        // iteramos las temporadas para obtener las subcategorias de cada una
+        $season_cats = $seasons->map(function($e) {
+            $id = $e->_season; // id de la categoria raiz
+            $children = DB::select('CALL categoriesOf(?)', [$id]); // subcategoriad de la categoria raiz
+            return [ "parent"=>$e, "children"=>$children ];
+        });
+
+        // Creamos la lista completa de las categorias de la temporada
+        $idsp = $season_cats->map(fn($sc) => $sc["parent"]->_season );// ids de las categorias padre
+        $idsc = $season_cats->map(fn($sc) => $sc["children"])->flatten()->map(fn($c) => $c->id);// ids de las categorias hijas
+        $ids_cats = $idsp->merge($idsc); // lista completa de ids de las categorias en las temporadas
+
+        return [
+            "cats" => $season_cats,
+            "ids" => $ids_cats
+        ];
     }
 
     public function structure(Request $request){
@@ -144,7 +175,7 @@ class WarehouseController extends Controller
         }
     }
 
-    public function products(Request $request){
+    public function _products(Request $request){
         $wid = $request->route('wid');
 
         $page = ProductStock::with([
@@ -361,5 +392,20 @@ class WarehouseController extends Controller
         $row = ProductStock::with(["state"])->where([ ["_warehouse", $wid], ["_product", $product] ])->first();
 
         return response()->json(["update"=>$update,"row"=>$row]);
+    }
+
+    public function comparator(Request $request){
+        $data = Store::with([ "type", "warehouses" => fn($q) => $q->with("type") ])->get();
+        return response()->json([ "data" => $data ]);
+    }
+
+    public function comparator_start(Request $request){
+        $wid = $request->route('wid');
+        $vswid = $request->route('vswid');
+        $pids = $request->pids;
+
+        $items = ProductStock::with(["state"])->whereIn("_warehouse",[$wid,$vswid])->whereIn("_product",$pids);
+
+        return response([ "wid"=>$wid, "vswid"=>$vswid, "pids"=>$pids ]);
     }
 }
