@@ -16,6 +16,7 @@ use App\Http\Controllers\UsersController;
 use App\Http\Controllers\StoresController;
 use App\Http\Controllers\ProvidersController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ComparatorWarehouse;
 use App\Http\Controllers\PreorderController;
 use App\Http\Controllers\AssistController;
 use App\Http\Controllers\CashController;
