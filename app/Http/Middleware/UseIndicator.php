@@ -3,10 +3,10 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use App\Models\User;
 use Illuminate\Http\Request;
+use App\Models\User;
 
-class UseUsers
+class UseIndicator
 {
     /**
      * Handle an incoming request.
@@ -18,7 +18,7 @@ class UseUsers
     public function handle(Request $request, Closure $next)
     {
         $id = $request->fixeds->uid;
-        $user = User::find($id)->modules()->where('_module','4f36')->first();
+        $user = User::find($id)->modules()->where('_module','v76v')->first();
         if($user){
             return $next($request);
         }else{

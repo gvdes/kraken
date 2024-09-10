@@ -15,4 +15,15 @@ class ModuleApp extends Model
     public function modules(){
         return $this->hasMany('App\Modules\ModuleApp','id','root');
     }
+
+    public function parent()
+    {
+        return $this->belongsTo(ModuleApp::class, 'root', 'id');
+    }
+
+    // Relación para obtener los hijos
+    public function children()
+    {
+        return $this->hasMany(ModuleApp::class, 'root', 'id');
+    }
 }

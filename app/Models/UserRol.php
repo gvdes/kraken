@@ -10,6 +10,9 @@ class UserRol extends Model
     use HasFactory;
 
     protected $table = 'user_roles';
+    protected $fillable = ['name','description','type_rol','hierarchy','_area'];
+    public $timestamps = false;
+
 
     public function area(){ return $this->hasOne('App\Models\Area','id','_area');}
 

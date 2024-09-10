@@ -5,11 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class RolDefaultPermission extends Model
+class CashState extends Model
 {
-    protected $table = 'role_default_permissions';
-
-    protected $fillable = ['_rol','_permission','_module'];
+    protected $table = "cash_states";
     public $timestamps = false;
-
 }

@@ -17,6 +17,12 @@ use App\Http\Controllers\StoresController;
 use App\Http\Controllers\ProvidersController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ComparatorWarehouse;
+use App\Http\Controllers\PreorderController;
+use App\Http\Controllers\AssistController;
+use App\Http\Controllers\CashController;
+use App\Http\Controllers\IndicatorController;
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -71,7 +77,6 @@ Route::middleware('kraken')->group(function(){
                                 Route::post('structure','sectionate');
                                 Route::get('resume','resume');
                         });
-
                         Route::prefix('comparatool')
                             ->controller(ComparatorWarehouse::class)
                             ->group(function(){
@@ -101,6 +106,34 @@ Route::middleware('kraken')->group(function(){
                     Route::get('/{rid}','find')->where(['rid'=>'[0-9]+']);
                     Route::get('/preview/{rid}','preview')->where(['rid'=>'[0-9]+']);
                 });
+
+
+                Route::prefix('orders')->controller(PreorderController::class)->group(function(){
+                    Route::get('/', 'index');
+                    Route::get('/getConfig', 'getConfig');
+                    Route::get('getOrderforuser', 'getOrderforuser');
+                    Route::get('/getPrints/{type}', 'getPrints');
+                    Route::get('/{oid}', 'getOrder');
+                    Route::post('/getOrders', 'getOrders');
+                    Route::post('/createOrder', 'createOrder');
+                    Route::post('/addProduct', 'addProduct');
+                    Route::post('/ModifyProduct', 'ModifyProduct');
+                    Route::post('/removeProduct', 'removeProduct');
+                    Route::post('/changeStatus','changeStatus');
+                    Route::post('/changeConfig','changeConfig');
+
+                });
+                Route::prefix('cash')->controller(CashController::class)->group(function(){
+                    Route::get('/getCash', 'getCash');
+                    Route::post('/OpenCash', 'OpenCash');
+                });
+                Route::prefix('rrhh')->controller(AssistController::class)->group(function(){
+                    Route::get('/justifications', 'Index');
+                    Route::get('/form', 'form');
+                    Route::post('/addFile', 'addFile');
+                    Route::post('/addForm', 'addForm');
+
+                });
         });
 
     Route::prefix('apps/{sid}')
@@ -116,6 +149,9 @@ Route::middleware('kraken')->group(function(){
             });
     });
 
+    Route::prefix('resp/form')->controller(IndicatorController::class)->group(function(){
+        Route::get('/{form}','getFormResp');
+    });
     Route::prefix('cluster')
     // ->middleware('cluster')
     ->group(function(){
@@ -131,9 +167,14 @@ Route::middleware('kraken')->group(function(){
             Route::get('users','getUsers');
             Route::get('getIndex','getIndex');
             Route::get('getUserWor','getUserWorkpoint');
+            Route::get('getPosition','getPosition');
+            Route::get('getPermissionsRol/{id}','getPermissionsRol');
             Route::put('changework','changeWork');
             Route::post('updateuser','updateUser');
             Route::post('adduser','addUser');
+            Route::post('addArea','addArea');
+            Route::post('addPuesto','addPuesto');
+            Route::post('modifyPuesto','modifyPuesto');
         });
         Route::prefix('stores')->middleware('UseStores')->controller(StoresController::class)->group(function(){
             Route::get('index','getStores');
@@ -149,6 +190,29 @@ Route::middleware('kraken')->group(function(){
             Route::get('index','index');
             Route::get('getProduct/{product}','getProduct');
         });
+        Route::prefix('Assist')->middleware('UseAssist')->controller(AssistController::class)->group(function(){
+            Route::get('index','index');
+            Route::get('new','new');
+            Route::get('getJustifications','getJustifications');
+            Route::get('pingNew/{d}','pingNew');
+            Route::get('ping/{d}','ping');
+            Route::post('edit','edit');
+            Route::post('addDevice','addDevice');
+            Route::post('changeStatus','changeStatus');
+        });
+        Route::prefix('Indicators')->middleware('UseIndicator')->controller(IndicatorController::class)->group(function(){
+            Route::get('index','index');
+            Route::get('getForms','getForms');
+            Route::get('/{form}', 'getForm');
+            Route::post('addForm','addForm');
+            Route::post('addQuestion','addQuestion');
+        });
+        Route::prefix('Indicators')->controller(IndicatorController::class)->group(function(){
+            Route::get('getForms','getForms');
+            Route::get('getForm/{form}','getFormResp');
+        });
+
+
     });
 
     Route::prefix('vmedia')

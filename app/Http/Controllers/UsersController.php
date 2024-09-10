@@ -11,8 +11,11 @@ use App\Models\Apps;
 use App\Models\UserApps;
 use App\Models\UserRol;
 use App\Models\UserModules;
+use App\Models\ModuleApp;
+use App\Models\Permission;
 use App\Models\UserStates;
 use App\Models\UserLog;
+use App\Models\RolDefaultPermission;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
@@ -167,7 +170,7 @@ class UsersController extends Controller
 
     public function getUserWorkpoint(){
 
-        $users = User::with('rol','rol.area')->whereHas('rol.area', function($q){
+        $users = User::with('store','rol','rol.area')->whereHas('rol.area', function($q){
             $q->whereIn('id',[15,16,17]);
         })->get();
         $branches = Store::whereNotIn('id',[17,18])->get();
@@ -194,16 +197,16 @@ class UsersController extends Controller
                     $res = "Cambio Usuario Realizado";
                     return response()->json($res,200);
                 }else{
-                    $res = "No se pudo actualizar el usuario";
-                    return response()->json($res,404);
+                    $res = "No se logro actualizar el Store principal de el usuario";
+                    return response()->json($res,500);
                 }
             }else{
-                $res = "No se pudo actualizar el usuario";
-                return response()->json($res,404);
+                $res = "No se logro modificar el Store de el usuario";
+                return response()->json($res,500);
             }
         }else {
-            $res = "No se pudo actualizar el usuario";
-            return response()->json($res,404);
+            $res = "No se actualizo el Store actual de el usuario";
+            return response()->json($res,500);
         }
     }
 
@@ -266,4 +269,131 @@ class UsersController extends Controller
 
         }
     }
+
+    public function getPosition(){
+        $roles = Area::with('roles.permissions')->get();
+        $modules = ModuleApp::with('children.children')->where('deep',0)->get();
+        $permissions = Permission::all();
+
+        $res = [
+            "areas"=>$roles,
+            "modules"=>$modules,
+            "permissions"=>$permissions
+        ];
+        return response()->json($res,200);
+    }
+
+    public function addArea(Request $request){
+        $area = Area::create($request->all());
+        $res = $area->fresh(['roles'])->toArray();
+        return response()->json($res,200);
+    }
+
+    public function addPuesto(Request $request){
+        $area = UserRol::create($request->rol);
+        $res = $area->fresh(['area'])->toArray();
+        if($res){
+            $permi = $request->permissions;
+            foreach($permi as $permis){
+                $ins [] = [
+                    "_rol"=>$res['id'],
+                    "_permission"=>$permis['_permission'],
+                    "_module"=>$permis['id']
+                ];
+            }
+            $roles  = RolDefaultPermission::insert($ins);
+            if($roles){
+                return response()->json($res,200);
+            }else{ return response()->json('Hubo un problema con los permissos');}
+        }
+    }
+
+    public function getPermissionsRol(Request $request){
+        $permissions = UserRol::with('permissions')->where('id',$request->id)->first();
+        if($permissions){
+            return response()->json($permissions,200);
+        }else{
+            return response()->json([],200);
+        }
+
+    }
+
+    public function modifyPuesto(Request $request){
+        $rol = UserRol::find($request->rol['id']);
+        if ($rol) {
+            $rol->name = $request->rol['name'];
+            $rol->description = $request->rol['description'];
+            $res = $rol->save();
+
+            if ($res) {
+                // Eliminar permisos existentes del rol
+                RolDefaultPermission::where('_rol', $request->rol['id'])->delete();
+
+                // Obtener nuevos permisos
+                $ins = $this->permissions($request->rol['id'], $request->permissions);
+                // Filtrar permisos que no sean 0
+                $permisos = array_filter($ins, function ($val) {
+                    return $val['_permission'] !== 0;
+                });
+
+                // Insertar nuevos permisos
+                $roles = RolDefaultPermission::insert($permisos);
+
+                if ($roles) {
+                    // Obtener usuarios con el rol actualizado
+                    $users = User::where('_rol', $request->rol['id'])->get();
+                    if ($users) {
+                        foreach ($users as $user) {
+                            // Eliminar módulos de usuario existentes
+                            UserModules::where('_user', $user->id)->delete();
+
+                            // Crear nuevos módulos de usuario basados en los nuevos permisos
+                            $userper = array_map(function ($val) use ($user) {
+                                return [
+                                    '_user' => $user->id,
+                                    '_permission' => $val['_permission'],
+                                    '_module' => $val['_module']
+                                ];
+                            }, $permisos);
+
+                            // Insertar nuevos módulos de usuario
+                            $insertar = UserModules::insert($userper);
+
+                            if ($insertar) {
+                                // Actualizar el estado del usuario
+                                $modify = User::find($user->id);
+                                $modify->_state = 5;
+                                $modify->save();
+                            }
+                        }
+                    }
+                    return response()->json($roles, 200);
+                } else {
+                    return response()->json('Hubo un problema con los permisos', 500);
+                }
+            } else {
+                return response()->json('Hubo un problema al actualizar el rol', 500);
+            }
+        } else {
+            return response()->json('Rol no encontrado', 404);
+        }
+    }
+
+    public function permissions($id, $permissions){
+        static $ins = [];
+        // $del = RolDefaultPermission::where('_rol',$id)->delete();
+        foreach($permissions as $permis){
+            $ins [] = [
+                "_rol"=>$id,
+                "_permission"=>$permis['_permission'],
+                "_module"=>$permis['id']
+            ];
+            if(isset($permis['children']) && count($permis['children']) > 0){
+                $this->permissions($id,$permis['children']);
+            }
+        }
+        return $ins;
+    }
+
+
 }

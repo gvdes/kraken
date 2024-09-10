@@ -11,5 +11,9 @@ class Seasons extends Model
 
     public function category(){
         return $this->belongsTo('\App\Models\ProductCategory','_category','id');
+
+    }
+    public function rules(){
+        return $this->hasMany('\App\Models\SeassonBussinesRules','_season','id');
     }
 }

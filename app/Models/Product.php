@@ -31,4 +31,6 @@ class Product extends Model
 
     public function Prices(){ return $this->hasMany('App\Models\ProductPrices','_product','id'); }
 
+    public function measure(){ return $this->hasOne('App\Models\UnitMeassure','id','_unit_mesure'); }
+
 }
