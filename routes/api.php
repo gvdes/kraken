@@ -104,7 +104,8 @@ Route::middleware('kraken')->group(function(){
                     Route::get('/','index');
                     Route::post('/','create');
                     Route::get('/{rid}','find')->where(['rid'=>'[0-9]+']);
-                    Route::get('/preview/{rid}','preview')->where(['rid'=>'[0-9]+']);
+                    // Route::get('/preview/{rid}','preview')->where(['rid'=>'[0-9]+']);
+                    Route::get('/preview/{rid}','preview');
                 });
 
 

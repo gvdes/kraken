@@ -26,60 +26,36 @@ class Elo extends Controller {
         // $init = Carbon::now()->startOfDay()->format("Y-m-d H:i:s");
         // $end = Carbon::now()->endOfDay()->format("Y-m-d H:i:s");
 
-        $store = 7;
-        $wrhReq = 18;
+        $store = 1;
+        $wrhReq = 1;
         $wrhSup = 1;
         $vswid = 1;
         $product = 2;
         $uid = 1;
         $model = [ "_product"=>8841, "_location"=>249 ];
         // $items = ProductStock::with(["state"])->whereIn("_warehouse",[$wid,$vswid])->whereIn("_product",$pids)->get();
+        $seasons = $this->season($store);
+        $seasonsids = $seasons["ids"];
+        $ids_wrhs_comp = [1,2,4,92];
 
-        $season = $this->season($store); // temporadas de la sucursal
-        $categories = $season["ids"];
-        $categoryPlaceholders = implode(',', array_fill(0, count($categories), '?'));
-        $parameters = array_merge([$wrhSup, $wrhReq], $categories);
+        $stockWarehouse = ProductStock::with(["product"])->where([
+            ["_state",1],
+            ["_min",">",0],
+            ["available","<=","_min"],
+            ["_warehouse",$wrhReq]
+        ])->whereHas("product", function($q) use($seasonsids){
+            $q->where("_state",1)->whereIn("_category",$seasonsids);
+        })->withSum([
+            "stocksProduct" => function($q) use($ids_wrhs_comp){
+                return $q->whereIn("_warehouse",$ids_wrhs_comp);
+            }
+        ],"available")->limit(2000)->get();
 
-        $sto_prod_dest = 'SELECT
-            P.`code` AS "product_code",
-            P.`short_code` AS "product_shortcode",
-            P.`id` AS "product_id",
-            P.`_state` AS "state_incat",
-            CST.`name` AS "state_incat_name",
-            stoReq.`_product` AS "sto_product_id",
-            stoReq.`_current` AS "current",
-            stoReq.`available` AS "available",
-            stoReq.`in_coming` AS "transit",
-            stoReq.`_min` AS "stock_min",
-            stoReq.`_max` AS "stock_max",
-            stoReq.`_state` AS "state_inwrh",
-            WST.`name` AS "state_inwrh_name",
-            stoDest.`_current` AS "current_dest",
-            stoDest.`available` AS "available_dest"
-        FROM product_stock stoReq
-            INNER JOIN products P ON P.`id` = stoReq.`_product`
-            INNER JOIN product_states CST ON CST.`id` = P.`_state`
-            INNER JOIN product_states WST ON WST.`id` = stoReq.`_state`
-            INNER JOIN product_stock stoDest ON (stoDest.`_warehouse` = ? AND stoDest.`_product` = stoReq.`_product`)
-        WHERE
-            stoReq.`_warehouse` = ? AND
-            (stoReq.`_min`>0 OR stoReq.`_max`>0) AND
-            P.`_category` IN ('.$categoryPlaceholders.');
-        ';
+        // $prods = ProductStock::whereIn("_warehouse",[1])->where("_product",1)->sum("available");
 
-        try {
-            //code...
-            $sto_prod_dest = DB::select($sto_prod_dest,$parameters);
-            return sizeof($sto_prod_dest);
-            // dd($sto_prod_dest);
-        } catch (\Throwable $th) {
-            return $th;
-        }
-
-
-        // dd($items);
-        // return $products;
-        // return true;
+        // dd($stockWarehouse);
+        // return $seasons["ids"];
+        return true;
         // return count($items);
     }
 

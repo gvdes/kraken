@@ -9,54 +9,61 @@ use App\Models\ProductStock;
 use App\Models\Warehouse;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\User;
 
 class ComparatorWarehouse extends Controller
 {
+
+    private $user=null; ##modelo del usuario que peticiona
+    protected $uid=null; ##id del usuario que peticiona
+    private $fixedsReq = null; ## parametros fijos del reques (userid rol etc)
+    private $sid=null; ## id de la sucursal
+    private $wid=null; ## id del almacen que peticiona
+    private $store=null; ## modelo con la sucursal que peticiona
+    private $warehouse=null; ## modelo con el almacen que peticiona
+    private $seasons=[]; ## almacena los ids de las temporadas de la sucursal/almacen que peticiona
+    ## almacena los tipos de reporte disponibles
     private $reports = [
         "A" => "rep_min_and_max",
         "B" => "rep_models_miss"
     ];
 
-    public function index(Request $request){
-        $sid = $request->route('sid');
-        $wid = $request->route('wid');
-        $rol = $request->fixeds->rol;
+    public function __construct(Request $request){
+        $this->sid = $request->route('sid');
+        $this->wid = $request->route('wid');
+        $this->store = Store::find($this->sid);
+        $this->warehouse = Warehouse::find($this->wid);
+    }
 
-        $stores = Store::with([
-            "warehouses" => fn($q) => $q->with(['type']),
-            "type"
-        ])->get();
-
-        $resp = [
-            "stores" => $stores
-        ];
-
-        return response()->json($resp);
+    public function index(){
+        // no se esta usando por ahora
+        return response()->json("no se esta usando por ahora");
     }
 
     public function report(Request $request){
-        $sid = $request->route('sid'); // id de la tienda origen
-        $wrhReq = $request->route('wid'); // id del almacen de la tiend origen
         $report = $request->route('repid');
+        $this->uid = $request->fixeds->uid;
+        $this->user = User::find($this->uid);
 
-
-        $season = $this->season($sid); // temporadas de la sucursal
+        $this->seasons = $this->loadSeasons($this->sid); // temporadas de la sucursal
 
         $func = $this->reports[$report]; // reporte a generar
-        $respReport = $this->$func($wrhReq,$season["ids"],$sid);
+        $respReport = $this->$func();
 
         $resp = [
-            "respReport"=>$respReport,
             "repid" => $report,
-            "wrhReq" => $wrhReq,
-            // "products" => $products,
-            "season" => $season
+            "widReq" => $this->wid,
+            "seasons" => $this->seasons,
+            "store" => $this->store,
+            "warehouse" => $this->warehouse,
+            "user" => $this->user,
+            "respReport"=>$respReport
         ];
 
         return response()->json($resp);
     }
 
-    private function season($sid){
+    private function loadSeasons($sid){
         // obtenemos las temporadas de la tienda con su categoria
         $seasons = StoresSeasons::with([ "category" ])->where([ ["_store",$sid], ["_state",1] ])->get();
 
@@ -78,47 +85,53 @@ class ComparatorWarehouse extends Controller
         ];
     }
 
-    private function rep_min_and_max($wrhReq,$ids_cats,$store){
+    private function rep_min_and_max(){
+        $this->store->id;
+        $this->store->_type;
+        $isCds = ($this->store->_type == 1); ## indica si el request es desde una sucursal tipo CEDIS o no
 
-        $warehouses = Warehouse::where([ ["_store",1], ["_type",1], ["_state",1] ])->get();
+        // 1.- Definir si la sucursal solicitantes es un CEDIS o SUCURSAL
+        if ($isCds) {
+            /**
+             * LA PETICION FUE REALIZADA DESDE CEDIS
+             * Se realizara el comparativo del almacen solicitante VS los demas almacenes
+             * 1.1.- obtener los almacenes de CEDIS (sucursal 1) exceptuando el id del almacen que solicita
+             */
+            $wrhCompares = Warehouse::where([[ "_store",1 ], ["_type",1], ["id","!=",$this->wid]])->select("id")->get()->map(fn($r) => $r->id );
+        }else{
+            /**
+             * LA PETICION FUE REALIZADA DESDE UNA SUCURSAL STANDARD.
+             * Se realizara un reporte de minimos/maximos VS los almacenes de cedis
+             * 1.1.- Obtener los ids de los almacenes CEDIS
+             */
+            $wrhCompares = Warehouse::where([[ "_store",1 ], ["_type",1] ])->select("id")->get()->map(fn($r) => $r->id );
+        }
 
-        // $wrhReqs = array_merge([$wrhReq],collect($warehouses)->map(function($w){ return $w->id; })->toArray());
+        // 2.- Obtener el stock de los productos del almacen solicitante
+        /**
+         * Obtenemos el stock actual del almacen que peticiona considerando las siguientes reglas:
+         * Almacen solicitante:
+         * ==> el producto debe estar activo: ["_state",1]
+         * ==> el minimo debe estar definido: ["_min",">",0]
+         * ==> el stock actual debe ser menor o igual al minimo: ["_current","<=","_min"]
+         * ==> el estatus en el catalogo de roductos debe estar activo: ->whereHas("product", function($q){ $q->where("_state",1); })
+         * */
+        $stockWarehouse = ProductStock::with(["product"])->where([
+            ["_state",1],
+            ["_min",">",0],
+            ["available","<=","_min"],
+            ["_warehouse",$this->wid]
+        ])->whereHas("product", function($q){ $q->where("_state",1); })->get();
 
-        // $names_cols =
+        // 3.- Obtenemos lista de ids de los productos obtenidos por el almacen solicitante
+        $idsProducts = $stockWarehouse->map(fn($r) => $r->_product);
 
-        // $categoryPlaceholders = implode(',', array_fill(0, count($ids_cats), '?'));
-        // $parameters = array_merge([$wrhSup, $wrhReq], $ids_cats);
+        // 4.- Obtener los stocks de los ids recuperados de los productos en los almacenes por comparar
+        $stockCompares = ProductStock::whereIn("_warehouse",$wrhCompares)->whereIn("_product",$idsProducts)->get();
 
-        // $query = 'SELECT
-        //     P.`code` AS "product_code",
-        //     P.`short_code` AS "product_shortcode",
-        //     P.`id` AS "product_id",
-        //     P.`description` AS "product_desc",
-        //     P.`_state` AS "state_incat",
-        //     CST.`name` AS "state_incat_name",
-        //     stoReq.`_product` AS "sto_product_id",
-        //     stoReq.`_current` AS "stock_current",
-        //     stoReq.`available` AS "stock_available",
-        //     stoReq.`in_coming` AS "stock_transit",
-        //     stoReq.`_min` AS "stock_min",
-        //     stoReq.`_max` AS "stock_max",
-        //     stoReq.`_state` AS "state_inwrh",
-        //     WST.`name` AS "state_inwrh_name",
-        //     stoDest.`_current` AS "dest_current",
-        //     stoDest.`available` AS "dest_available"
-        // FROM product_stock stoReq
-        //     INNER JOIN products P ON P.`id` = stoReq.`_product`
-        //     INNER JOIN product_states CST ON CST.`id` = P.`_state`
-        //     INNER JOIN product_states WST ON WST.`id` = stoReq.`_state`
-        //     INNER JOIN product_stock stoDest ON (stoDest.`_warehouse` = ? AND stoDest.`_product` = stoReq.`_product`)
-        // WHERE
-        //     stoReq.`_warehouse` = ? AND
-        //     (stoReq.`_min`>0 OR stoReq.`_max`>0) AND
-        //     stoReq.`_state` = 1 AND
-        //     P.`_category` IN ('.$categoryPlaceholders.');
-        // ';
+        // 5.- Realizar el cruce para saber el "stock total real" de todos los almacenes y filtrar que productos se agregaran tentativamente al pedido de resurtido
 
-        return [ "almacenes" => $warehouses];
+        return [ "almacenes" => [$idsProducts, $stockCompares]];
         // return DB::select($query,$parameters);
     }
 

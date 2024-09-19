@@ -2,17 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\DB;
 use App\Models\ProductStock;
 use App\Models\RestockOrder;
 use Illuminate\Http\Request;
 use App\Models\RestockStates;
+use App\Models\RestockTypes;
 use App\Models\Warehouse;
 use App\Models\Store;
 use App\Models\Product;
+use App\Models\StoresSeasons;
 use Carbon\Carbon;
 
 class RestockController extends Controller
 {
+    private $previews = [
+        "A" => "prev_min_max",
+        "B" => "prev_models_miss"
+    ];
+
     public function index(Request $request){
         $sid = $request->route('sid');
         $_init = $request->query('init') ? $request->query('init') : Carbon::now();
@@ -22,6 +30,7 @@ class RestockController extends Controller
         $end = Carbon::parse($_end)->endOfDay()->format("Y-m-d H:i:s");
 
         $states = RestockStates::all();
+        $reqTypes = RestockTypes::all();
         $stores = Store::with([
             "warehouses" => fn($q) => $q->with(['type']),
             "type"
@@ -35,6 +44,7 @@ class RestockController extends Controller
         return response()->json([
             "stores"=>$stores,
             "states" => $states,
+            "reqTypes"=>$reqTypes,
             "_init" => $_init,
             "_end" => $_end,
             "init" => $init,
@@ -100,14 +110,95 @@ class RestockController extends Controller
     public function preview (Request $request){
         $sid = $request->route('sid');
         $rid = $request->route('rid');
+        $wrhsrc = $request->query("wrhsrc")!="undefined" ? $request->query("wrhsrc") : null; // almacen fuente
+        $dynFn = $this->previews[$rid];
 
-        $wrh = Warehouse::where([ ["_store",$sid],["_type",1] ])->first();
-        $wid = $wrh->id;
+        $store = Store::find($sid);
+        $seasons = $this->getSeasons($sid);
+        $warehouse_req = null;
+        $warehouses_comp = null;
+        $res_dynfn = null;
 
-        $products = Product::whereHas("stocks", function($q) use($wid){
-            $q->where([ ["_state",1], ["_warehouse",$wid] ])->whereRaw("((_current<_max) and (_min>0 and _max>0))");
-        })->get();
+        $isACedis = ($store->_type == 1);
+        $warehouse_req = Warehouse::where([ ["_type",1], ["_store",$sid] ])->first();
 
-        return response()->json([ "productsdb"=>$products ]);
+        if($isACedis){
+            $warehouse_req = Warehouse::find($wrhsrc);
+            $warehouses_comp = Warehouse::where([ ["id","!=",$wrhsrc], ["_type",4], ["_state",1], ["_store", $sid] ])->get();
+        }else{
+            $warehouse_req = Warehouse::where([ ["_type",1], ["_store", $sid] ])->first();
+            $warehouses_comp = Warehouse::where([ ["_type",4], ["_state",1], ["_store", 1] ])->get();
+        }
+
+        if($warehouse_req && $warehouses_comp){
+            $ids_wrhs_comp = $warehouses_comp->map( fn($w) => $w->id);
+            $res_dynfn = $this->$dynFn($warehouse_req->id, $ids_wrhs_comp, $seasons["ids"]);
+        }
+
+        return response()->json([
+            "store"=>$store,
+            "report"=>$rid,
+            "isACedis"=>$isACedis,
+            "seassons"=>$seasons,
+            "warehouses_comp"=>$warehouses_comp,
+            "warehouse_req"=>$warehouse_req,
+            "resdynfn"=>$res_dynfn,
+            "wrhsrc"=>$wrhsrc,
+            "ids_wrhs_comp"=>$ids_wrhs_comp
+        ]);
+    }
+
+    private function prev_min_max($wrhsrc,$ids_wrhs_comp=[],$seasonsids){
+
+        $stockWarehouse = ProductStock::with(["product"])->where([
+            ["_state",1],
+            ["_min",">",0],
+            ["available","<=","_min"],
+            ["_warehouse",$wrhsrc]
+        ])->whereHas("product", function($q) use($seasonsids){
+            $q->where("_state",1)->whereIn("_category",$seasonsids);
+        })->withSum([
+            "stocksProduct" => function($q) use($ids_wrhs_comp){
+                return $q->whereIn("_warehouse",$ids_wrhs_comp);
+            }
+        ],"available")->get();
+
+        return [
+            "wrhFrom"=>$wrhsrc,
+            "wrhVs"=>$ids_wrhs_comp,
+            "basket"=>$stockWarehouse
+        ];
+    }
+
+    private function prev_models_miss($wrhsrc,$ids_wrhs_comp=[]){
+        $stockWarehouse = [];
+
+        return [
+            "wrhFrom"=>$wrhsrc,
+            "wrhVs"=>$ids_wrhs_comp,
+            "basket"=>$stockWarehouse
+        ];
+    }
+
+    private function getSeasons($sid){
+        // obtenemos las temporadas de la tienda con su categoria
+        $seasons = StoresSeasons::with([ "category" ])->where([ ["_store",$sid], ["_state",1] ])->get();
+
+        // iteramos las temporadas para obtener las subcategorias de cada una
+        $season_cats = $seasons->map(function($e) {
+            $id = $e->_season; // id de la categoria raiz
+            $children = DB::select('CALL categoriesOf(?)', [$id]); // subcategoriad de la categoria raiz
+            return [ "parent"=>$e, "children"=>$children ];
+        });
+
+        // Creamos la lista completa de las categorias de la temporada
+        $idsp = $season_cats->map(fn($sc) => $sc["parent"]->_season );// ids de las categorias padre
+        $idsc = $season_cats->map(fn($sc) => $sc["children"])->flatten()->map(fn($c) => $c->id);// ids de las categorias hijas
+        $ids_cats = $idsp->merge($idsc)->toArray(); // lista completa de ids de las categorias en las temporadas
+
+        return [
+            "cats" => $season_cats,
+            "ids" => $ids_cats
+        ];
     }
 }

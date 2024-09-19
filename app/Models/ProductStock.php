@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductStock extends Model
 {
@@ -31,5 +32,9 @@ class ProductStock extends Model
     public function locations(){
         // return $this->hasManyThrough('App\Models\Location','App\Models\ProductLocation','_product','id','id','_location');
         return $this->hasManyThrough('App\Models\ProductLocation','App\Models\Location','_location','id','id','_product');
+    }
+
+    public function stocksProduct(){
+        return $this->hasMany('App\Models\ProductStock','_product','_product','App\Models\ProductStock');
     }
 }
