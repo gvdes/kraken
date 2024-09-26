@@ -48,8 +48,9 @@ class Elo extends Controller {
         })->withSum([
             "stocksProduct" => function($q) use($ids_wrhs_comp){
                 return $q->whereIn("_warehouse",$ids_wrhs_comp);
-            }
-        ],"available")->limit(2000)->get();
+            }],"available")
+        ->having('stocks_product_sum_available', '>', "product_stock._min")
+        ->get();
 
         // $prods = ProductStock::whereIn("_warehouse",[1])->where("_product",1)->sum("available");
 

@@ -160,8 +160,10 @@ class RestockController extends Controller
         })->withSum([
             "stocksProduct" => function($q) use($ids_wrhs_comp){
                 return $q->whereIn("_warehouse",$ids_wrhs_comp);
-            }
-        ],"available")->get();
+            }],"available")
+        ->having('stocks_product_sum_available', '>', 0)
+        ->get();
+        // ->get()->filter(fn($p) => $p["stocks_product_sum_available"] > $p["_min"])->values();
 
         return [
             "wrhFrom"=>$wrhsrc,
