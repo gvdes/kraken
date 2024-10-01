@@ -24,7 +24,7 @@ class PreorderController extends Controller
     public function index(Request $request){
         $store = $request->route('sid');
         $user =  $request->fixeds->uid;
-        $preorders = Order::with('user','state')->where([['_store',$store],['_created_by',$user]])->whereDate('created_at',now())->get();
+        $preorders = Order::with('user','state','order')->where([['_store',$store],['_created_by',$user]])->whereDate('created_at',now())->get();
         $clients = Client::where([['_type',2],['_state',1]])->get();
         $res = [
             "sid"=>$store,
@@ -38,7 +38,7 @@ class PreorderController extends Controller
         $to =  $request->to;
         $from =  $request->from;
         $store = $request->route('sid');
-        $preorders = Order::with('user','state')->where('_store', $store)->whereDate('created_at','>=',$from)->whereDate('created_at','<=',$to)->get();
+        $preorders = Order::with('user','state','order')->where('_store', $store)->whereDate('created_at','>=',$from)->whereDate('created_at','<=',$to)->get();
         return response()->json($preorders,200);
     }
 
@@ -52,6 +52,13 @@ class PreorderController extends Controller
         Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
 
         $order = Order::with([
+            'order.bodie.product.category.familia.seccion',
+            'order.bodie.product.measure',
+            'order.bodie.unitsupply',
+            'order.bodie.rates',
+            'order.bodie.product.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
+            'order.bodie.product.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
+
             'bodie.product.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
             'bodie.product.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
             'client.rate',
@@ -121,7 +128,7 @@ class PreorderController extends Controller
         ];
         $insOr = Order::insert($listor);
         if($insOr){
-            $norder = Order::with('user','state')->where('id',$order)->first();
+            $norder = Order::with('user','state','order')->where('id',$order)->first();
             $savelog = $this->createLog($status, $typelog, $norder,$ip);
             if($savelog){
                 return response()->json($norder);
@@ -131,7 +138,42 @@ class PreorderController extends Controller
         }else{
             return response()->json("No se pudo crear el pedido bro",500);
         }
+    }
 
+    public function createOrderAnexo(Request $request){
+        $ip = $request->ip();
+        $anex = $request->id;
+        $store = $request->route('sid');
+        $user = $request->fixeds->uid;
+        $order = Order::max('id') + 1;
+        $tck = Order::where('_store',$store)->whereDate('created_at',now())->max('num_ticket') + 1;
+        $status = 1;
+        $typelog = 1;
+        $client = $request->_client;
+        $name = $request->name;
+        $listor = [
+            "id"=>$order,
+            "_client"=>$client,
+            "name"=>$name,
+            "num_ticket"=>$tck,
+            "time_life"=>'00:15:00',
+            "_created_by"=>$user,
+            "_state"=>$status,
+            "_store"=>$store,
+            "_order_by"=>$anex
+        ];
+        $insOr = Order::insert($listor);
+        if($insOr){
+            $norder = Order::with('user','state','order.bodie')->where('id',$order)->first();
+            $savelog = $this->createLog($status, $typelog, $norder,$ip);
+            if($savelog){
+                return response()->json($norder);
+            }else{
+                return response()->json('No se genero el log',500);
+            }
+        }else{
+            return response()->json("No se pudo crear el pedido bro",500);
+        }
     }
 
     public function addProduct(Request $request){
@@ -168,13 +210,12 @@ class PreorderController extends Controller
             '_supply_by' => $request->_supply_by
         ]);
 
-
         $store = $request->route('sid');
         $suc = Store::find($store); // obtiene la sucursal
         $onWrhs = $request->query('warehouses') ?
         explode(",",$request->query('warehouses')) :
         Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
-        if($order){
+        if($order > 0){
             $bodie = OrderBodie::with([
                 'product.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
                 'product.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
@@ -184,7 +225,7 @@ class PreorderController extends Controller
                 'rates'])->where([['_product',$request->_product],['_order',$request->_order]])->first();
             return $bodie;
         }else{
-            return response()->json('No se pudo modificar el producto',401);
+            return response()->json('El Producto no necesito de modificacion',200);
         }
     }
 

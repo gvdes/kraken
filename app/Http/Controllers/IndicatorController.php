@@ -126,4 +126,17 @@ class IndicatorController extends Controller
         }
     }
 
+    public function changeStatus(Request $request){
+        $form = $request->id;
+        $status = $request->_active;
+        $updform = FORM::find($form);
+        $updform->_active = $status;
+        $updform->save();
+        if($updform){
+            return response()->json(true,200);
+        }else{
+            return response()->json(false,401);
+        }
+    }
+
 }
