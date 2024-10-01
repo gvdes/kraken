@@ -13,6 +13,7 @@ class Order extends Model
     public function store(){ return $this->belongsTo('\App\Models\Store','_store','id'); }
     public function state(){ return $this->belongsTo('\App\Models\OrderState','_state','id'); }
     public function client(){return $this->belongsTo('\App\Models\Client','_client','id'); }
+    public function order(){return $this->belongsTo(Order::class,'_order_by','id'); }
     public function bodie(){return $this->hasMany('\App\Models\OrderBodie','_order','id'); }
 
 }

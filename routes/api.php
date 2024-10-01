@@ -117,6 +117,7 @@ Route::middleware('kraken')->group(function(){
                     Route::get('/{oid}', 'getOrder');
                     Route::post('/getOrders', 'getOrders');
                     Route::post('/createOrder', 'createOrder');
+                    Route::post('/createOrderAnexo', 'createOrderAnexo');
                     Route::post('/addProduct', 'addProduct');
                     Route::post('/ModifyProduct', 'ModifyProduct');
                     Route::post('/removeProduct', 'removeProduct');
@@ -206,6 +207,7 @@ Route::middleware('kraken')->group(function(){
             Route::get('getForms','getForms');
             Route::get('/{form}', 'getForm');
             Route::post('addForm','addForm');
+            Route::post('changeStatus','changeStatus');
             Route::post('addQuestion','addQuestion');
         });
         Route::prefix('Indicators')->controller(IndicatorController::class)->group(function(){
