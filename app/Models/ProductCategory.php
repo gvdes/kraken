@@ -11,7 +11,7 @@ class ProductCategory extends Model
     protected $table = 'product_categories';
 
     public function category(){
-        return $this->belongsTo('\App\Modles\ProductCategory');
+        return $this->belongsTo('\App\Models\ProductCategory');
     }
     public function products()
     {
