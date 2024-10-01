@@ -54,18 +54,28 @@ class RestockController extends Controller
     }
 
     public function create(Request $request){
-        $sid = $request->route('sid');
-        $to = $request->origin;
-        $uid = $request->fixeds->uid;
+        $sid = $request->route('sid');// sucursal desde donde se crea el pedido
+        $uid = $request->fixeds->uid;// usuario que solicita el pedido
+        $restockType = $request->type["type"]["id"];
+        $folio = $request->config["folio"];
+        $avz_params = $request->config["avz_params"];
 
+        switch ($restockType) {
+            case 2: $resp = $this->createAvz($sid,$uid,$avz_params); break; // pedido avanzado
+            case 3: $resp = $this->createPrev($sid,$uid,$folio); break; // pedido desde preventa
+            case 4: $resp = $this->createFsol($sid,$uid,$folio); break; // pedido desde Factusol
+            default: $resp = $this->createBlank($sid,$uid); break; // pedido en blanco
+        }
+
+        return response()->json($resp);
+    }
+
+    private function createBlank($sid,$uid){
         $init = Carbon::now()->startOfDay()->format("Y-m-d H:i:s");
         $end = Carbon::now()->endOfDay()->format("Y-m-d H:i:s");
-
         /**
          * nos: Number Order Store (on day)
          * nod: Number Order Day (general)
-         * nfs: Nex Consecutive Store
-         * nfd: Next Consecutive Day
          */
         $nos = RestockOrder::where(function($q) use($sid){ $q->where("_store_from",$sid)->orWhere("_store_to",$sid); })
             ->whereBetween("created_at",[$init,$end])
@@ -81,7 +91,7 @@ class RestockController extends Controller
             "num_ticket_store" => $ncs,
             "_created_by" => $uid,
             "_store_from" => $sid,
-            "_store_to" => $to,
+            "_store_to" => 1,
             "_type" => 1,
             "_state" => 1,
             "printed" => 0
@@ -90,7 +100,22 @@ class RestockController extends Controller
         $neworder->save();
         $neworder->load([ "owner", "state", "fromStore", "toStore" ]);
 
-        return response()->json([ "order"=>$neworder ]);
+        return $neworder;
+    }
+
+    private function createAvz($sid,$uid,$params){
+        $type = $params["type"]["id"];
+        $sections = $params["sections"];
+
+        return ["Se crea pedido Avanzadisimo", $type];
+    }
+
+    private function createPrev($folio){
+        return ["Se crea pedido desde Preventa", $folio];
+    }
+
+    private function createFsol($folio){
+        return ["Se crea pedido desde FactuSol", $folio];
     }
 
     public function find(Request $request){
@@ -162,12 +187,23 @@ class RestockController extends Controller
                 return $q->whereIn("_warehouse",$ids_wrhs_comp);
             }],"available")
         ->having('stocks_product_sum_available', '>', 0)
-        ->get();
-        // ->get()->filter(fn($p) => $p["stocks_product_sum_available"] > $p["_min"])->values();
+        ->get()
+        ->filter(fn($p) => $p["stocks_product_sum_available"] > $p["_min"])
+        ->map(function($p){
+            $isreq = ($p["available"]<=$p["_max"]);
+            $ipack = $p["product"]["pieces"];
+            $amount = ($p["_max"]-$p["available"]);
+
+            $p["_z_isreq"] = $isreq;
+            $p["_z_amount_units"] = $isreq ? $amount:0;
+            $p["_z_amount_packs"] = $isreq ? floor($amount/$ipack) : 0;
+
+            return $p;
+        })->values();
 
         return [
             "wrhFrom"=>$wrhsrc,
-            "wrhVs"=>$ids_wrhs_comp,
+            "wrhsTo"=>$ids_wrhs_comp,
             "basket"=>$stockWarehouse
         ];
     }
