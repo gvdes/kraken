@@ -103,9 +103,8 @@ Route::middleware('kraken')->group(function(){
                 ->group(function(){
                     Route::get('/','index');
                     Route::post('/','create');
-                    Route::get('/{rid}','open')->where(['rid'=>'[0-9]+']);
-                    Route::get('{rid}/discard','discard')->where(['rid'=>'[0-9]+']);
-                    Route::post('{rid}/add','add')->where(['rid'=>'[0-9]+']);
+                    Route::get('/{rid}','find')->where(['rid'=>'[0-9]+']);
+                    // Route::get('/preview/{rid}','preview')->where(['rid'=>'[0-9]+']);
                     Route::get('/preview/{rid}','preview');
                 });
 
@@ -211,8 +210,6 @@ Route::middleware('kraken')->group(function(){
             Route::post('changeStatus','changeStatus');
             Route::post('addQuestion','addQuestion');
             Route::post('editQuest','editQuest');
-            Route::post('deleteQuest','deleteQuest');
-
 
         });
         Route::prefix('Indicators')->controller(IndicatorController::class)->group(function(){
