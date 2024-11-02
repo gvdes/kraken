@@ -16,4 +16,5 @@ class Store extends Model
     public function price(){ return $this->hasOne('App\Models\PricesTypes','id', '_price_type');}
     public function users(){ return $this->hasMany('App\Models\User','_store');}
     public function warehouses(){ return $this->hasMany('App\Models\Warehouse','_store'); }
+    public function restock(){ return $this->hasManyThrough('App\Models\RestockOrder', 'App\Models\Warehouse','_store','warehouse_from','id','id'); }
 }
