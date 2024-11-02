@@ -52,13 +52,14 @@ class PreorderController extends Controller
         Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
 
         $order = Order::with([
+
             'order.bodie.product.category.familia.seccion',
             'order.bodie.product.measure',
             'order.bodie.unitsupply',
             'order.bodie.rates',
             'order.bodie.product.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
             'order.bodie.product.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
-
+            'user',
             'bodie.product.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
             'bodie.product.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
             'client.rate',
@@ -305,7 +306,11 @@ class PreorderController extends Controller
                 if($validate){
                     $create_log= $this->logs($log);
                     $printer = Printer::find($print);
-                    $cash = $this->selectCash($store);
+                    if($order->_order_by){
+                        $cash = $order->order['_cash'];
+                    } else {
+                        $cash = $this->selectCash($store);
+                    }
                     $cashier = CashRegister::find($cash);
                     $order = Order::find($order->id);
                     $order->_cash = $cashier->id;
@@ -321,14 +326,18 @@ class PreorderController extends Controller
                 $validate = $this->verifyProcess($status,$store);
                 if($validate){
                     $create_log= $this->logs($log);
-                    // $printer = Printer::find($print);
-                    // $cash = $this->selectCash($store);
-                    // $cashier = CashRegister::find($cash);
-                    // $order = Order::find($order->id);
-                    // $order->_cash = $cashier->id;
-                    // $order->save();
-                    // $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
-                    // $cellerPrinter->CliOrder($order,$status,$cashier);
+                    $printer = Printer::find($print);
+                    if($order->_order_by){
+                        $cash = $order->order['_cash'];
+                    } else {
+                        $cash = $this->selectCash($store);
+                    }
+                    $cashier = CashRegister::find($cash);
+                    $order = Order::find($order->id);
+                    $order->_cash = $cashier->id;
+                    $order->save();
+                    $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
+                    $cellerPrinter->CliOrder($order,$status,$cashier);
                     break;
                 }else{
                     $status = 4;

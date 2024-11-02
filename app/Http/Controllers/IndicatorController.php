@@ -9,12 +9,8 @@ use App\Models\FormType;
 use App\Models\FormQuestion;
 use App\Models\QuestionType;
 use App\Models\QuestionOption;
+use App\Models\QuestionResponse;
 use App\Models\User;
-
-
-
-
-
 
 class IndicatorController extends Controller
 {
@@ -63,52 +59,79 @@ class IndicatorController extends Controller
     }
 
     public function addQuestion(Request $request){
-        $form = $request->form;
-        $question = $request->question['quest'];
-        $condition = $request->condition;
-        $busform = Form::find($form['id']);
-        if($busform){
-            $quest = [
-                '_form'=>$busform->id,
-                'question'=>$question['question'],
-                '_type'=>$question['_type']['id'],
-            ];
-            $insque = FormQuestion::insertGetId($quest);
-            if($insque){
-                if($question['_type']['id'] == 2){
-                    $optsquest = $request->question['opts'];
-                    foreach($optsquest as $option){
-                        if($condition['quest']['state']){
-                            if($option == $condition['quest']['condition'] ){
-                                $insopt = [
-                                    "_question"=>$insque,
-                                    "option"=>$option,
-                                    "condition"=>json_encode($condition)
-                                ];
-                            }else{
-                                $insopt = [
-                                    "_question"=>$insque,
-                                    "option"=>$option,
-                                ];
-                            }
-                        }else{
-                            $insopt = [
-                                "_question"=>$insque,
-                                "option"=>$option,
-                            ];
-                        }
-                        $inopqu = QuestionOption::insert($insopt);
-                    }
-                    $pregunta = FormQuestion::with(['type'])->find($insque);
-                    return response()->json($pregunta,200);
-                }
-                $pregunta = FormQuestion::with(['type'])->find($insque);
-                return response()->json($pregunta,200);
-            }else{
-                return response()->json(["Message"=>"No se agrego la pregunta :("],500);
-            }
+        $form = $request->_form;
+        $question= $request->question;
+        $type = $request->type['id'];
+        $required = $request->_required;
+
+        $newQuestion = new FormQuestion();
+        $newQuestion->_form = $form;
+        $newQuestion->question = $question;
+        $newQuestion->_type = $type;
+        $newQuestion->_required = $required;
+        $newQuestion->save();
+        $res = $newQuestion->load(['type','options']);
+        if($res){
+            return response()->json($res);
         }else{
-            return response()->json(["Message"=>"No se encuentra el formulario"],404);
+            return response()->json('Hubo un problema con la creacion');
+        }
+
+    }
+
+    public function editQuest(Request $request){
+        // return $request->all();
+        $id = $request->id;
+        $question = FormQuestion::find($id);
+        $question->question = $request->question;
+        $question->_required = $request->_required;
+        $question->_type = $request->type['id'];
+        $question->save();
+        $options = $request->options;
+        $conditions = $request->condition;
+        $matchedCond = [];
+        if(count($options) > 0){
+            foreach($options as $option){
+                $resop [] = $option['option'];
+                $opts = QuestionOption::updateOrCreate(
+                    ['_question'=>$id,'option'=>$option['option']],
+                    ['_question'=>$id,'option'=>$option['option'],'condition'=>$option['condition']],
+                );
+
+            }
+            $delopt = QuestionOption::where('_question', $id)
+            ->whereNotIn('option', $resop)
+            ->get(); // Obtiene las opciones a eliminar
+
+            // Ahora se eliminan los registros encontrados
+            $delopt->each(function($option) {
+            $option->delete();
+            });
+            $question->load(['type','options']);
+            return response()->json($question,200);
+        }else{
+            $question->load(['type']);
+           return response()->json($question,200);
+        }
+    }
+
+    public function deleteQuest(Request $request){
+        $id = $request->id;
+        $response = QuestionResponse::where('_question',$id)->get();
+        if(count($response) == 0){
+            $delOpt = QuestionOption::where('_question',$id)->delete();
+            $delQues = FormQuestion::find($id)->delete();
+            $res = [
+                "delete"=>true,
+                "message"=>'Se elimino con exito'
+            ];
+            return response()->json($res,200);
+        }else{
+            $res = [
+                "delete"=>false,
+                "message"=>'No se puede eliminar la pregunta, cuenta con respuestas'
+            ];
+            return response()->json($res,200);
         }
     }
 

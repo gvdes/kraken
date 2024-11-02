@@ -209,6 +209,10 @@ Route::middleware('kraken')->group(function(){
             Route::post('addForm','addForm');
             Route::post('changeStatus','changeStatus');
             Route::post('addQuestion','addQuestion');
+            Route::post('editQuest','editQuest');
+            Route::post('deleteQuest','deleteQuest');
+
+
         });
         Route::prefix('Indicators')->controller(IndicatorController::class)->group(function(){
             Route::get('getForms','getForms');

@@ -61,6 +61,7 @@ class MiniPrinterController extends Controller
             $printer->setEmphasis(true);
             $printer->setReverseColors(true);
             $printer->setTextSize(2,2);
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->text("ANEXO ".$order->_order_by." \n");
             $printer->setEmphasis(false);
             $printer->setReverseColors(false);
