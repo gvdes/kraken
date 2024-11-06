@@ -153,6 +153,8 @@ Route::middleware('kraken')->group(function(){
 
     Route::prefix('resp/form')->controller(IndicatorController::class)->group(function(){
         Route::get('/{form}','getFormResp');
+        Route::post('/addResponse','addResponse');
+
     });
     Route::prefix('cluster')
     // ->middleware('cluster')
@@ -210,6 +212,7 @@ Route::middleware('kraken')->group(function(){
             Route::post('changeStatus','changeStatus');
             Route::post('addQuestion','addQuestion');
             Route::post('editQuest','editQuest');
+            Route::post('deleteQuest','deleteQuest');
 
         });
         Route::prefix('Indicators')->controller(IndicatorController::class)->group(function(){

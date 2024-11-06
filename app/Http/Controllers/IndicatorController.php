@@ -10,6 +10,7 @@ use App\Models\FormQuestion;
 use App\Models\QuestionType;
 use App\Models\QuestionOption;
 use App\Models\QuestionResponse;
+use App\Models\FormResponse;
 use App\Models\User;
 
 class IndicatorController extends Controller
@@ -137,7 +138,7 @@ class IndicatorController extends Controller
 
     public function getFormResp($form){
         $getform = Form::with('type','responsible','user','question.type','question.options')->where('id',$form)->first();
-        $users = User::with('store:id,name','rol.area','state','useStore','apps')->get();
+        $users = User::all();
         if($users){
             $res = [
                 "usuarios"=>$users,
@@ -162,4 +163,34 @@ class IndicatorController extends Controller
         }
     }
 
+    public function addFile(Request $request){
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $fileName =$request->idms."-".$file->getClientOriginalName();
+            $file->move(public_path('multimedia'), $fileName);
+            return response()->json(['message' => $fileName]);
+        }
+        return response()->json(['message' => $request->all()], 400);
+    }
+
+    public function addResponse(Request $request){
+        $user = $request->_user;
+        $form = $request->_form;
+        $questions = $request->question;
+        return $questions;
+        foreach($questions as $question){
+            return $question;
+        }
+        if ($request->hasFile('files')) {
+            $folderName = uniqid();
+            $folderPath = public_path('multimedia/' . $folderName);
+            $files = $request->file('files');
+            $saved = [];
+            foreach($files as $file){
+                $fileName=$file->getClientOriginalName();
+                $file->move($folderPath, $fileName);
+            }
+            return $saved;
+        }
+    }
 }
