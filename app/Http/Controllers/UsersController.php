@@ -91,20 +91,21 @@ class UsersController extends Controller
         $device = $request->ip();
         $account = $request->user;
         $nick = $request->nick;
-        $celphone = str_replace('-','',$request->celphone);
-        $exist = User::where('nick',$nick)->get();
-        if(count($exist) > 0){
-            return response()->json('El nick ya existe',401);
-        }else {
-            $existcel = User::where('celphone',$celphone)->get();
-            if(count($existcel) > 0){
-                return response()->json('El telefono ya existe',401);
-            }else{
-                $existem = User::where('email',$request->email)->get();
-                if(count($existem) > 0){
-                    return response()->json('El email ya existe',401);
-                }else{
-                    $user = new User();//se inserta el usuario
+        $celphone = str_replace('-', '', $request->celphone);
+
+        $exist = User::where('nick', $nick)->get();
+        if (count($exist) > 0) {
+            return response()->json('El nick ya existe', 401);
+        } else {
+            $existcel = User::where('celphone', $celphone)->get();
+            if (count($existcel) > 0) {
+                return response()->json('El telefono ya existe', 401);
+            } else {
+                $existem = User::where('email', $request->email)->get();
+                if (count($existem) > 0) {
+                    return response()->json('El email ya existe', 401);
+                } else {
+                    $user = new User(); // Crear el usuario
                     $user->name = $request->name;
                     $user->surnames = $request->surnames;
                     $user->dob = $request->dob;
@@ -118,55 +119,71 @@ class UsersController extends Controller
                     $user->_state = 1;
                     $user->_store = $request->_store;
                     $user->save();
+
                     $res = $user->fresh()->toArray();
-                    if($res){
-                         //userapps
-                         $app = new UserApps();
-                         if($request->apps){
-                            foreach($request->apps as $api){
-                                $insapp[] = [
-                                    "_user"=> $res['id'],
-                                    "_app"=>$api,
-                                ];
-                             }
-                             $app->insert($insapp);
-                         }
-
-                         //user_storest
-                         $stores = UserStores::where('_user',$res['id'])->whereIn('_store',$request->stores);
-                         $stores->update(['_state'=>1]);
-
-                        //user_permissions
-                        $useper = new UserModules;
-                        $permissions = UserRol::with('permissions')->where('id',$request->_rol)->first();
-                        $permi = $permissions['permissions'];
-                        foreach($permi as $pre){
-                            $inserper[] = [
-                                "_user"=>$res['id'],
-                                "_permission"=>$pre['_permission'],
-                                "_module"=>$pre['_module']
-                            ];
+                    if ($res) {
+                        if ($request->hasFile('avatar')) {
+                            $avatar = $request->file('avatar');
+                            $uid = $res['id'];
+                            $folderPath = public_path('multimedia/profiles/'.$uid.'/');
+                            if (!file_exists($folderPath)) {
+                                mkdir($folderPath, 0777, true);
+                            }
+                            $avatarPath = $folderPath . '/' . $avatar->getClientOriginalName();
+                            $avatar->move($folderPath, $avatar->getClientOriginalName());
+                            $user->avatar = $avatar->getClientOriginalName();
+                            $user->save();
                         }
-                        $useper->insert($inserper);
 
-                        $inslog = new UserLog();
-                        $inslog->_user = $account;
-                        $inslog->_type_log = 1;
-                        $inslog->details = json_encode([
-                            "at"=>now()->format('Y-m-d H:m:s'),
-                            "device"=>$device,
-                            "account"=>["id"=>$res['id'], "nick"=>$res['nick']]
-                        ]);
-                        $inslog->save();
+                        $apps = !empty($request->apps) ?  explode(',',$request->apps) : [];
+                        if(count($apps) > 0){
+                        $app = new UserApps();
+                           foreach($apps as $api){
+                               $insapp[] = [
+                                   "_user"=> $res['id'],
+                                   "_app"=>$api,
+                               ];
+                            }
+                            $app->insert($insapp);
+                        }
 
-                        return response()->json($res,200);
-                    }else{
-                        return response()->json('No se pudo crear el usuario',500);
+                        //user_storest
+                        $stores = UserStores::where('_user',$res['id'])->whereIn('_store',explode(',',$request->stores));
+                        $stores->update(['_state'=>1]);
+
+
+                       //user_permissions
+                       $useper = new UserModules;
+                       $permissions = UserRol::with('permissions')->where('id',$request->_rol)->first();
+                       $permi = $permissions['permissions'];
+                       foreach($permi as $pre){
+                           $inserper[] = [
+                               "_user"=>$res['id'],
+                               "_permission"=>$pre['_permission'],
+                               "_module"=>$pre['_module']
+                           ];
+                       }
+
+                       $useper->insert($inserper);
+
+                       $inslog = new UserLog();
+                       $inslog->_user = $account;
+                       $inslog->_type_log = 1;
+                       $inslog->details = json_encode([
+                           "at"=>now()->format('Y-m-d H:m:s'),
+                           "device"=>$device,
+                           "account"=>["id"=>$res['id'], "nick"=>$res['nick']]
+                       ]);
+                       $inslog->save();
+                        return response()->json($res, 200);
+                    } else {
+                        return response()->json('No se pudo crear el usuario', 500);
                     }
                 }
             }
         }
     }
+
 
     public function getUserWorkpoint(){
 
@@ -192,7 +209,7 @@ class UsersController extends Controller
         if($upd){
             $updn = UserStores::where('_user',$user)->where('_store',$store)->update(['_state'=>1]);
             if($updn){
-                $updu = User::where('id',$user)->update(['_store'=>$store]);
+                $updu = User::where('id',$user)->update(['_store'=>$store,'_state'=>5]);
                 if($updu){
                     $res = "Cambio Usuario Realizado";
                     return response()->json($res,200);
@@ -294,14 +311,18 @@ class UsersController extends Controller
         $res = $area->fresh(['area'])->toArray();
         if($res){
             $permi = $request->permissions;
-            foreach($permi as $permis){
-                $ins [] = [
-                    "_rol"=>$res['id'],
-                    "_permission"=>$permis['_permission'],
-                    "_module"=>$permis['id']
-                ];
-            }
-            $roles  = RolDefaultPermission::insert($ins);
+            // foreach($permi as $permis){
+                $ins = $this->permissions($res['id'],$permi);
+                $permisos = array_filter($ins, function ($val) {
+                    return $val['_permission'] !== 0;
+                });
+                // $ins [] = [
+                //     "_rol"=>$res['id'],
+                //     "_permission"=>$permis['_permission'],
+                //     "_module"=>$permis['id']
+                // ];
+            // }
+            $roles  = RolDefaultPermission::insert($permisos);
             if($roles){
                 return response()->json($res,200);
             }else{ return response()->json('Hubo un problema con los permissos');}
@@ -309,7 +330,7 @@ class UsersController extends Controller
     }
 
     public function getPermissionsRol(Request $request){
-        $permissions = UserRol::with('permissions')->where('id',$request->id)->first();
+        $permissions = UserRol::with(['permissions'])->where('id',$request->id)->first();
         if($permissions){
             return response()->json($permissions,200);
         }else{
@@ -395,5 +416,29 @@ class UsersController extends Controller
         return $ins;
     }
 
+    public function RessetPass($uid){
+        $user =  User::find($uid); // Crear el usuario
+        $user->password = Hash::make('12345');
+        $user->change_password = 1;
+        $user->_state = 5;
+        $res = $user->save();
+        if($res){
+            return response()->json('La contrasena se reseteo correctamente',200);
+        }else{
+            return response()->json('No se pudo resetear la contrasena',500);
+        }
+    }
+
+    public function InsertRCid(Request $request){
+        $user = User::find($request->id);
+        $user->RC_id = $request->RC_id;
+        $res = $user->save();
+        if($res){
+            return response()->json('Se actualizo el id de el checador',200);
+        }else{
+            return response()->json('No se logro actualizar el id de el checador',500);
+        }
+
+    }
 
 }

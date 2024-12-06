@@ -36,10 +36,14 @@ class Kraken extends Controller
             // se mapean las filas de los modulos para parsear a un objeto los detalles del modulo (icono etc...)
             // $user->modules->map(function($m){ $m->module->details = json_decode($m->module->details); return $m; });
 
-            if($user->_state<=2){ // la cuenta puede iniciar sesion (genera "token" de identificacion)
+            if($user->_state<=2 || $user->_state==5){ // la cuenta puede iniciar sesion (genera "token" de identificacion)
                 $datafortoken = [ "uid"=>$user->id, "rol"=>$user->_rol ]; // data que se encrypta en el token autenticador
                 $token = $this->genToken($datafortoken);// genera el token con el rol y el id del usuario + fecha de creacion + fecha de expiracion (tiempo que es valido el token)
 
+                if($user->_state == 5 && $user->change_password == 0){
+                    $user->_state = 2;
+                    $user->save();
+                }
                 /** si el status es 2 agregar al usuario el log de inicio de sesion */
                 if($user->_state==2){
                     $details = [ "device"=>$ip, "at"=>Carbon::now()->format("Y-m-d h:i:s") ];
@@ -62,24 +66,23 @@ class Kraken extends Controller
         $ip = $request->ip();
         $newPass = Hash::make($request->newpass);
         $details = [ "ip"=>$ip, "at"=>Carbon::now()->format("Y-m-d h:i:s") ];
-
-        $user = User::with([
-            'rol',
-            'state',
-            'store',
-            'stores',
-            'modules' => fn($q) => $q->with([ 'permission', 'module' ]),
-            'apps' => fn($q) => $q->with([ 'app' ])
-        ])->find($uid);
-
+        $user = User::find($uid);
         $user->password = $newPass;
         $user->_state = 2;
         $user->change_password = 0;
         $user->save();
 
+        $user->load([
+                'rol',
+                'state',
+                'store',
+                'stores',
+                'modules' => fn($q) => $q->with([ 'permission', 'module' ]),
+                'apps' => fn($q) => $q->with([ 'app' ])
+        ]);
+
         UserLog::create([ "_user" => $uid, "_type_log" => 2, "details" => json_encode($details) ]);
 
-        $user->refresh();
 
         return response()->json(["user"=>$user]);
     }

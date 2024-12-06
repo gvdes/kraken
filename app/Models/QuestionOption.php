@@ -7,6 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class QuestionOption extends Model
 {
-    protected $fillable = ["_question",'option','condition'];
+    protected $fillable = ["_question",'option','condition','_correct'];
     protected $table = "question_options";
 }

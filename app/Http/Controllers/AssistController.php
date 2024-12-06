@@ -30,7 +30,6 @@ class AssistController extends Controller
     }
     public function pingNew($d){
         $zk = new ZKTeco($d);
-
         if($zk->connect()){
             $number_serie = ltrim(stristr($zk->serialNumber(),'='),'=');
             $name = ltrim(stristr($zk->deviceName(),'='),'=');
@@ -85,28 +84,37 @@ class AssistController extends Controller
     public function form(Request $request){
         $store = $request->route('sid');
         $staff = User::where('_store',$store)->get();
-        return response()->json($staff);
+        $types = JustificationType::all();
+        $res = [
+            'user'=>$staff,
+            'types'=>$types
+        ];
+        return response()->json($res);
     }
 
-    public function addFile(Request $request){
-            if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $fileName =$request->idms."-".$file->getClientOriginalName();
-                $file->move(public_path('multimedia'), $fileName);
-                return response()->json(['message' => $fileName]);
-            }
-            return response()->json(['message' => $request->all()], 400);
-    }
 
     public function addForm(Request $request){
         $jstf = $request->all();
         $justification = new AssistJustification;
-        $justification->_user = $jstf['user']['id'];
+        $justification->_user = $jstf['user'];
         $justification->created_at  = now();
         $justification->start_date = $jstf['start_date'];
         $justification->final_date = $jstf['final_date'];
+        $justification->_type = $jstf['_type'];
         $justification->notes = $jstf['notes'];
-        $justification->evidence = $jstf['evidence'];
+        if ($request->hasFile("evidence")) {
+            $folderName = uniqid();
+            $folderPath = public_path('multimedia/profiles/'.$jstf['user'].'/justifications/'.$folderName);
+            if (!file_exists($folderPath)) {
+                mkdir($folderPath, 0777, true);
+            }
+            $files = $request->file("evidence");
+            foreach ($files as $file) {
+                $fileName = $file->getClientOriginalName();
+                $file->move($folderPath, $fileName);
+            }
+            $justification->evidence = $folderName;
+        }
         $justification->save();
         $res = $justification->fresh()->toArray();
         if($res){
@@ -118,6 +126,22 @@ class AssistController extends Controller
 
     public function getJustifications(){
         $justifications = AssistJustification::with('user','paymen','type','state')->get();
+
+        foreach($justifications as $justification){
+            $userId = $justification['_user'];
+            $folderName = $justification['evidence'];
+            $folderPath = public_path("multimedia/profiles/{$userId}/justifications/{$folderName}");
+
+            if (!file_exists($folderPath) || !is_dir($folderPath)) {
+                $justification['files'] = [];
+            }
+            $files = array_values(array_diff(scandir($folderPath), ['.', '..'])); // Excluye `.` y `..`
+
+            $filesWithUrls = array_map(function ($file) use ($userId, $folderName) {
+                    return  "profiles/{$userId}/justifications/{$folderName}/{$file}";
+            }, $files);
+            $justification['files']= $filesWithUrls;
+        }
         $types = JustificationType::all();
         $percentage = PaymenPercentage::all();
         $states = JustificationState::all();

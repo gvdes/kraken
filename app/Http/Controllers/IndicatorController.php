@@ -12,6 +12,7 @@ use App\Models\QuestionOption;
 use App\Models\QuestionResponse;
 use App\Models\FormResponse;
 use App\Models\User;
+use App\Models\Store;
 
 class IndicatorController extends Controller
 {
@@ -70,6 +71,7 @@ class IndicatorController extends Controller
         $newQuestion->question = $question;
         $newQuestion->_type = $type;
         $newQuestion->_required = $required;
+        $newQuestion->_breach = $request->_breach;
         $newQuestion->save();
         $res = $newQuestion->load(['type','options']);
         if($res){
@@ -87,6 +89,8 @@ class IndicatorController extends Controller
         $question->question = $request->question;
         $question->_required = $request->_required;
         $question->_type = $request->type['id'];
+        $question->_points = isset($request->_points) ? $request->_points : null;
+        $question->_breach =  isset($request->_breach) ? $request->_breach : 0;
         $question->save();
         $options = $request->options;
         $conditions = $request->condition;
@@ -96,8 +100,7 @@ class IndicatorController extends Controller
                 $resop [] = $option['option'];
                 $opts = QuestionOption::updateOrCreate(
                     ['_question'=>$id,'option'=>$option['option']],
-                    ['_question'=>$id,'option'=>$option['option'],'condition'=>$option['condition']],
-                );
+                    ['_question'=>$id,'option'=>$option['option'],'condition'=>$option['condition'],'_correct'=>isset($option['_correct']) ? $option['_correct'] : 0]);
 
             }
             $delopt = QuestionOption::where('_question', $id)
@@ -136,15 +139,66 @@ class IndicatorController extends Controller
         }
     }
 
-    public function getFormResp($form){
+    public function getFormResp(Request $request, $sid ,$form){
+        $date = now()->format('Y-m-d');
+        $month = now()->format('m');
+        // return $month;
+        $uis = $request->fixeds;
+        $userForm = User::with(['rol.area','store'])->where('id',$uis->uid)->first();
+        $store = Store::find($sid);
         $getform = Form::with('type','responsible','user','question.type','question.options')->where('id',$form)->first();
         $users = User::all();
         if($users){
-            $res = [
-                "usuarios"=>$users,
-                "formulario"=>$getform
-            ];
-            return response()->json($res,200);
+            if($getform->_type == 1 || $getform->_type == 2) {
+                $responses = FormResponse::where([['_form',$getform->id],['_store',$sid]])->whereDate('created_at', $date)->get();
+            }else if($getform->_type == 3){
+                $responses = FormResponse::where([['_form',$getform->id],['_user',$uis->uid]])->whereMonth('created_at', $month)->get();
+            }
+            if(count($responses) >= 1){
+                return response()->json('Ya se respondio este formulario ya no esta disponible',401);
+            }else{
+                if($getform->_active == 1){
+                    if(in_array($uis->rol,[9,10,41]) && $getform->_responsible == 3 || $getform->_responsible == 1){
+                        if($store->_type == 1 ){
+                            if($getform->_type == 2 || $getform->_type == 3){
+                                $res = [
+                                    "usuarios"=>$users,
+                                    "formulario"=>$getform,
+                                ];
+                                return response()->json($res,200);
+                            }else{
+                                return response()->json('No correspondes a la sucursal de el formulario',401);
+                            }
+                        }else{
+                            if($getform->_type == 1 || $getform->_type == 3){
+                                $res = [
+                                    "usuarios"=>$users,
+                                    "formulario"=>$getform,
+                                ];
+                                return response()->json($res,200);
+                            }else{
+                                return response()->json('No correspondes a la sucursal de el formulario',401);
+                            }
+                        }
+                    } else if(in_array($userForm->rol['area']['id'],[1, 5, 7, 8]) && $getform->_responsible == 3 || $getform->_responsible == 1 || $getform->_responsible == 2){
+                        $res = [
+                            "usuarios"=>$users,
+                            "formulario"=>$getform,
+                        ];
+                        return response()->json($res,200);
+                    }else if($getform->_responsible == 1){
+                        $res = [
+                            "usuarios"=>$users,
+                            "formulario"=>$getform,
+                        ];
+                        return response()->json($res,200);
+                    }else{
+                        return response()->json('No puedes responder este formulario',401);
+                    }
+                }else{
+                    return response()->json('No esta disponible el formulario',401);
+                }
+            }
         }else{
             return response()->json("No hay ningun Usuario",404);
         }
@@ -174,23 +228,57 @@ class IndicatorController extends Controller
     }
 
     public function addResponse(Request $request){
+        // return $request->all();
         $user = $request->_user;
         $form = $request->_form;
+        $store = $request->_store;
         $questions = $request->question;
-        return $questions;
-        foreach($questions as $question){
-            return $question;
-        }
-        if ($request->hasFile('files')) {
-            $folderName = uniqid();
-            $folderPath = public_path('multimedia/' . $folderName);
-            $files = $request->file('files');
-            $saved = [];
-            foreach($files as $file){
-                $fileName=$file->getClientOriginalName();
-                $file->move($folderPath, $fileName);
+        $response = new FormResponse();
+        $response->_user = $user;
+        $response->_form = $form;
+        $response->_store = $store;
+        $response->save();
+        $response->fresh();
+        if($response){
+            foreach($questions as $index => $question){
+                $questResp = new QuestionResponse();
+                $questResp->_response = $response->id;
+                $questResp->_question = $question['id'];
+                $questResp->_option = isset($question['_option']) ? $question['_option'] : null;
+                $questResp->condition = isset($question['_condition']) ? Json_encode($question['_condition']) : null;
+                if(isset($question['evidence'])){
+                    if ($request->hasFile("question.$index.evidence")) {
+                        $folderName = uniqid();
+                        $folderPath = public_path('multimedia/forms/' . $folderName);
+                        // Crear el directorio si no existe
+                        if (!file_exists($folderPath)) {
+                            mkdir($folderPath, 0777, true);
+                        }
+                        $files = $request->file("question.$index.evidence"); // Accede a los archivos de 'evidence'
+                        foreach ($files as $file) {
+                            $fileName = $file->getClientOriginalName();
+                            $file->move($folderPath, $fileName);
+                        }
+                        $questResp->text = $folderName;
+                    }
+                }else{
+                    $questResp->text = $question['text'];
+                }
+                $questResp->save();
             }
-            return $saved;
+            $response->load(['responses.question']);
+            return response()->json($response,200);
+        }else{
+            return response()->json('Problemas al crear la respuesta', 500);
         }
+    }
+
+    public function changeQualified(Request $request){
+        $form = Form::find($request->id);
+        $form->_qualified = $request->_qualified;
+        $form->save();
+        $form->load(['type','responsible','user','question.type','question.options']);
+        return response()->json($form,200);
+
     }
 }

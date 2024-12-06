@@ -109,33 +109,38 @@ Route::middleware('kraken')->group(function(){
                 });
 
 
-                Route::prefix('orders')->controller(PreorderController::class)->group(function(){
-                    Route::get('/', 'index');
-                    Route::get('/getConfig', 'getConfig');
-                    Route::get('getOrderforuser', 'getOrderforuser');
-                    Route::get('/getPrints/{type}', 'getPrints');
-                    Route::get('/{oid}', 'getOrder');
-                    Route::post('/getOrders', 'getOrders');
-                    Route::post('/createOrder', 'createOrder');
-                    Route::post('/createOrderAnexo', 'createOrderAnexo');
-                    Route::post('/addProduct', 'addProduct');
-                    Route::post('/ModifyProduct', 'ModifyProduct');
-                    Route::post('/removeProduct', 'removeProduct');
-                    Route::post('/changeStatus','changeStatus');
-                    Route::post('/changeConfig','changeConfig');
+            Route::prefix('orders')->controller(PreorderController::class)->group(function(){
+                Route::get('/', 'index');
+                Route::get('/getConfig', 'getConfig');
+                Route::get('getOrderforuser', 'getOrderforuser');
+                Route::get('/getPrints/{type}', 'getPrints');
+                Route::get('/{oid}', 'getOrder');
+                Route::post('/getOrders', 'getOrders');
+                Route::post('/createOrder', 'createOrder');
+                Route::post('/createOrderAnexo', 'createOrderAnexo');
+                Route::post('/addProduct', 'addProduct');
+                Route::post('/ModifyProduct', 'ModifyProduct');
+                Route::post('/removeProduct', 'removeProduct');
+                Route::post('/changeStatus','changeStatus');
+                Route::post('/changeConfig','changeConfig');
 
-                });
-                Route::prefix('cash')->controller(CashController::class)->group(function(){
-                    Route::get('/getCash', 'getCash');
-                    Route::post('/OpenCash', 'OpenCash');
-                });
-                Route::prefix('rrhh')->controller(AssistController::class)->group(function(){
-                    Route::get('/justifications', 'Index');
-                    Route::get('/form', 'form');
-                    Route::post('/addFile', 'addFile');
-                    Route::post('/addForm', 'addForm');
+            });
+            Route::prefix('cash')->controller(CashController::class)->group(function(){
+                Route::get('/getCash', 'getCash');
+                Route::post('/OpenCash', 'OpenCash');
+            });
+            Route::prefix('rrhh')->controller(AssistController::class)->group(function(){
+                Route::get('/justifications', 'Index');
+                Route::get('/form', 'form');
+                Route::post('/addFile', 'addFile');
+                Route::post('/addForm', 'addForm');
 
-                });
+            });
+            Route::prefix('resp/form')->controller(IndicatorController::class)->group(function(){
+                Route::get('/{form}','getFormResp');
+                Route::post('/addResponse','addResponse');
+
+            });
         });
 
     Route::prefix('apps/{sid}')
@@ -151,11 +156,7 @@ Route::middleware('kraken')->group(function(){
             });
     });
 
-    Route::prefix('resp/form')->controller(IndicatorController::class)->group(function(){
-        Route::get('/{form}','getFormResp');
-        Route::post('/addResponse','addResponse');
 
-    });
     Route::prefix('cluster')
     // ->middleware('cluster')
     ->group(function(){
@@ -172,6 +173,7 @@ Route::middleware('kraken')->group(function(){
             Route::get('getIndex','getIndex');
             Route::get('getUserWor','getUserWorkpoint');
             Route::get('getPosition','getPosition');
+            Route::get('changePass/{uid}','RessetPass');
             Route::get('getPermissionsRol/{id}','getPermissionsRol');
             Route::put('changework','changeWork');
             Route::post('updateuser','updateUser');
@@ -179,6 +181,7 @@ Route::middleware('kraken')->group(function(){
             Route::post('addArea','addArea');
             Route::post('addPuesto','addPuesto');
             Route::post('modifyPuesto','modifyPuesto');
+            Route::post('InsertRCid','InsertRCid');
         });
         Route::prefix('stores')->middleware('UseStores')->controller(StoresController::class)->group(function(){
             Route::get('index','getStores');

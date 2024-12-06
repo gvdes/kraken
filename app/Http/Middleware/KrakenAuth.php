@@ -26,10 +26,15 @@ class KrakenAuth
             // expiracion $exp = $request->exp;
             $uid = $request->fixeds->uid;
             $state = User::find($uid)->_state;
-
             switch($state){
                 case 3: case 4: return response("Kraken: You have been banned!",511); break;
-                case 5: return response("Kraken: Restart session required!",511); break;
+                case 5:
+                    if ($request->path() !== 'api/kraken/firstlogin') {
+                        return response("Kraken: Restart session required!", 409);
+                        break;
+                    }
+                    return $next($request);
+                     break;
                 default: return $next($request); break;
             }
         } catch (DecryptException $e) { return response($e,511); }
