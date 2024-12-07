@@ -15,7 +15,7 @@ class User extends Model
 
     public function store(){ return $this->hasOne('App\Models\Store','id','_store'); }
 
-    public function stores(){ return $this->belongsToMany('App\Models\Store','user_stores','_user','_store'); }
+    public function stores(){ return $this->belongsToMany('App\Models\Store','user_stores','_user','_store')->withPivot('_state'); }
 
     public function useStore(){ return $this->hasMany('App\Models\UserStores','_user');}
 

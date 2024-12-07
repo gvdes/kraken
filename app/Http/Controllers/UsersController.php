@@ -187,44 +187,84 @@ class UsersController extends Controller
 
     public function getUserWorkpoint(){
 
-        $users = User::with('store','rol','rol.area')->whereHas('rol.area', function($q){
-            $q->whereIn('id',[15,16,17]);
-        })->get();
-        $branches = Store::whereNotIn('id',[17,18])->get();
+        // $users = User::with('store','rol','rol.area')->whereHas('rol.area', function($q){
+        //     $q->whereIn('id',[15,16,17]);
+        // })->get();
+        $users = User::with(['store:id,name','rol.area','state','useStore','apps'])->get();
+        $branches = Store::where('_state',1)->get();
+        $position = UserRol::with('area')->get();
+        $area = Area::all();
+        $app = Apps::select('id as value','name as label','name')->get();
+        $status = UserStates::all();
+        $workpoints = Store::select('id as value','name as label','alias', 'name')->get();
 
         $res = [
             "users"=>$users,
-            "branches"=>$branches
+            "branches"=>$branches,
+            "position"=>$position,
+            "area"=>$area,
+            "status"=>$status,
+            "workpoints"=>$workpoints,
+            "apps"=>$app
         ];
         return response()->json($res,200);
     }
 
     public function changeWork(Request $request){
-        $store = $request->store;
-        $user = $request->user;
-        $chus = User::find($user);
-        $wkp = $chus->_store;
+         // return $request->all();
+         $device = $request->ip();
+         $root = $request->fixeds->uid;
+         $account = $request->user;
+         $before = $account['store']['id'];
+         $storenew = $request->store;
+         $user = User::find($account['id']);
+         $user->_rol = $account['rol']['id'];
+         $user->_state = 5;
+         $user->_store = $storenew;
+         $user->save();
+         $res = $user->fresh()->toArray();
+         if($res){
+             //userapps
+             $app = new UserApps();
+             if($account['apps']){
+                 $deleted = UserApps::where('_user',$account['id'])->delete();
+                 $app->insert($account['apps']);
+             }
+             //stores
+             $stores = $account['use_store'];
+              foreach($stores as $store){
+                 $usestore = UserStores::where('_user',$account['id'])->where('_store',$store['_store']);
+                 $usestore->update(['_state'=>$store['_state']]);
+             }
+             //permissions
 
-        $upd = UserStores::where('_user',$user)->where('_store',$wkp)->update(['_state'=>2]);
-        if($upd){
-            $updn = UserStores::where('_user',$user)->where('_store',$store)->update(['_state'=>1]);
-            if($updn){
-                $updu = User::where('id',$user)->update(['_store'=>$store,'_state'=>5]);
-                if($updu){
-                    $res = "Cambio Usuario Realizado";
-                    return response()->json($res,200);
-                }else{
-                    $res = "No se logro actualizar el Store principal de el usuario";
-                    return response()->json($res,500);
-                }
-            }else{
-                $res = "No se logro modificar el Store de el usuario";
-                return response()->json($res,500);
-            }
-        }else {
-            $res = "No se actualizo el Store actual de el usuario";
-            return response()->json($res,500);
-        }
+             $useper = new UserModules;
+             $delete = UserModules::where('_user',$account['id'])->delete();
+             $permissions = UserRol::with('permissions')->where('id',$account['rol']['id'])->first();
+             $permi = $permissions['permissions'];
+             foreach($permi as $pre){
+                 $inserper[] = [
+                     "_user"=>$account['id'],
+                     "_permission"=>$pre['_permission'],
+                     "_module"=>$pre['_module']
+                 ];
+             }
+             $useper->insert($inserper);
+
+             $inslog = new UserLog();
+             $inslog->_user = $root;
+             $inslog->_type_log = 3;
+             $inslog->details = json_encode([
+                 "at"=>now()->format('Y-m-d H:m:s'),
+                 "modification"=>"Se cambio la sucursal del usuario de ".$before." a ".$storenew,
+                 "device"=>$device,
+                 "account"=>["id"=>$account['id'], "nick"=>$account['nick'],"_state"=>$account['state']['id']]
+             ]);
+             $inslog->save();
+             return response()->json($res,200);
+         }else{
+             return response()->json('No se logro modificar el usuario ',500);
+         }
     }
 
     public function updateUser(Request $request){
@@ -240,7 +280,7 @@ class UsersController extends Controller
         $user->email = $request->email;
         $user->gender = $request->gender;
         $user->_rol = $request->rol['id'];
-        $user->_state = $request->state['id'];
+        $user->_state = 5;
         $user->_store = isset($request->store['value']) ? $request->store['value'] : $request->store['id'];
         $user->save();
         $res = $user->fresh()->toArray();
@@ -283,7 +323,7 @@ class UsersController extends Controller
             $inslog->save();
             return response()->json($res,200);
         }else{
-
+            return response()->json('No se logro modificar el usuario ',500);
         }
     }
 

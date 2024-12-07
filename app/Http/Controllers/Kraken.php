@@ -28,7 +28,7 @@ class Kraken extends Controller
                 'rol',
                 'state',
                 'store',
-                'stores',
+                'stores'  => fn($q) => $q->wherePivot('_state', 1) ,
                 'modules' => fn($q) => $q->with([ 'permission', 'module' ]),
                 'apps' => fn($q) => $q->with([ 'app' ])
             ]);
@@ -76,7 +76,7 @@ class Kraken extends Controller
                 'rol',
                 'state',
                 'store',
-                'stores',
+                'stores' => fn($q) => $q->wherePivot('_state', 1) ,
                 'modules' => fn($q) => $q->with([ 'permission', 'module' ]),
                 'apps' => fn($q) => $q->with([ 'app' ])
         ]);
