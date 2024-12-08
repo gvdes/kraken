@@ -48,28 +48,16 @@ class RootUserSeeder extends Seeder
         $user->save();
 
         $res = $user->fresh()->toArray();
-            // $user->avatar = 'heroedeadpool.png';
-            // $user->save();
-
-            // $avatar = $request->file('avatar');
             $uid = $res['id'];
             $folderPath = public_path('multimedia/profiles/'.$uid.'/');
             if (!file_exists($folderPath)) {
                 mkdir($folderPath, 0777, true);
             }
-
             $currentAvatarPath = public_path('multimedia/' .'heroedeadpool.png');
-
             $newAvatarPath = $folderPath . 'heroedeadpool.png';
-
-            // Verifica si el archivo existe en la ubicación actual
             if (file_exists($currentAvatarPath)) {
-                // Mueve el archivo a la nueva ubicación
-                rename($currentAvatarPath, $newAvatarPath);
+                copy($currentAvatarPath, $newAvatarPath);
             }
-            // $avatarPath = $folderPath . '/' . $avatar->getClientOriginalName();
-            // $avatar->move($folderPath, $avatar->getClientOriginalName());
-            // $user->avatar = $avatar->getClientOriginalName();
             $user->avatar = 'heroedeadpool.png';
             $user->save();
 
