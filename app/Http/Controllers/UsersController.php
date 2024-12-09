@@ -155,7 +155,7 @@ class UsersController extends Controller
                        //user_permissions
                        $useper = new UserModules;
                        $permissions = UserRol::with('permissions')->where('id',$request->_rol)->first();
-                       if(count($permissions) > 0){
+                       if($permissions){
                         $permi = $permissions['permissions'];
                         foreach($permi as $pre){
                             $inserper[] = [
