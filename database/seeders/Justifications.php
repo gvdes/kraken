@@ -5,6 +5,9 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\JustificationType;
+use App\Models\JustificationState;
+use App\Models\PaymenPercentage;
+
 
 class Justifications extends Seeder
 {
@@ -30,5 +33,20 @@ class Justifications extends Seeder
 
         ];
         $insresponsibles = JustificationType::insert($insresponsibles);
+
+        $states = [
+            ['id'=> 1, "name"=>'Aprobado'],
+            ['id'=> 2, "name"=>'En Espera'],
+            ['id'=> 3, "name"=>'Desaprobado']
+        ];
+        $insstate = JustificationState::insert($states);
+
+        $percentage = [
+            ['id'=> 1, "percentage"=>0],
+            ['id'=> 2, "percentage"=>20],
+            ['id'=> 3, "percentage"=>50],
+            ['id'=> 3, "percentage"=>100]
+        ];
+        $inspercentage = Per::PaymenPercentage($percentage);
     }
 }
