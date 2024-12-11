@@ -272,6 +272,7 @@ class UsersController extends Controller
         // return $request->all();
         $device = $request->ip();
         $account = $request->user;
+        $state = $request->state['id'] == 4 ? 4 : 5;
         $user = User::find($request->id);
         $user->name = $request->name;
         $user->surnames = $request->surnames;
@@ -281,7 +282,7 @@ class UsersController extends Controller
         $user->email = $request->email;
         $user->gender = $request->gender;
         $user->_rol = $request->rol['id'];
-        $user->_state = 5;
+        $user->_state = $state;
         $user->_store = isset($request->store['value']) ? $request->store['value'] : $request->store['id'];
         $user->save();
         $res = $user->fresh()->toArray();
