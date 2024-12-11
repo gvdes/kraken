@@ -45,7 +45,7 @@ class Justifications extends Seeder
             ['id'=> 1, "percentage"=>0],
             ['id'=> 2, "percentage"=>20],
             ['id'=> 3, "percentage"=>50],
-            ['id'=> 3, "percentage"=>100]
+            ['id'=> 4, "percentage"=>100]
         ];
         $inspercentage = PaymenPercentage::insert($percentage);
     }
