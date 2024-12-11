@@ -47,6 +47,6 @@ class Justifications extends Seeder
             ['id'=> 3, "percentage"=>50],
             ['id'=> 3, "percentage"=>100]
         ];
-        $inspercentage = Per::PaymenPercentage($percentage);
+        $inspercentage = PaymenPercentage::insert($percentage);
     }
 }
