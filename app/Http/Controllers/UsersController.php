@@ -122,19 +122,18 @@ class UsersController extends Controller
 
                     $res = $user->fresh()->toArray();
                     if ($res) {
+                        $uid = $res['id'];
+                        $folderPath = public_path('multimedia/profiles/'.$uid.'/');
+                        if (!file_exists($folderPath)) {
+                            mkdir($folderPath, 0777, true);
+                        }
                         if ($request->hasFile('avatar')) {
                             $avatar = $request->file('avatar');
-                            $uid = $res['id'];
-                            $folderPath = public_path('multimedia/profiles/'.$uid.'/');
-                            if (!file_exists($folderPath)) {
-                                mkdir($folderPath, 0777, true);
-                            }
                             $avatarPath = $folderPath . '/' . $avatar->getClientOriginalName();
                             $avatar->move($folderPath, $avatar->getClientOriginalName());
                             $user->avatar = $avatar->getClientOriginalName();
                             $user->save();
                         }
-
                         $apps = !empty($request->apps) ?  explode(',',$request->apps) : [];
                         if(count($apps) > 0){
                         $app = new UserApps();

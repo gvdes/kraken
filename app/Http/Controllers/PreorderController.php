@@ -42,6 +42,19 @@ class PreorderController extends Controller
         return response()->json($preorders,200);
     }
 
+    public function getOrdersCheckin(Request $request){
+        $store = $request->route('sid');
+        $user =  $request->fixeds->uid;
+        $preorders = Order::with('user','state','order')->where([['_store',$store],['_created_by',$user]])->whereDate('created_at',now())->get();
+        $clients = Client::where([['_type',2],['_state',1]])->get();
+        $res = [
+            "sid"=>$store,
+            "preorders"=>$preorders,
+            "clients"=>$clients
+        ];
+        return response()->json($res,200);
+    }
+
     public function getOrder(Request $request){
         $id = $request->route('oid');
         $store = $request->route('sid');
@@ -131,10 +144,10 @@ class PreorderController extends Controller
         if($insOr){
             $norder = Order::with('user','state','order')->where('id',$order)->first();
             $savelog = $this->createLog($status, $typelog, $norder,$ip);
-            if($savelog){
+            if($savelog['log']){
                 return response()->json($norder);
             }else{
-                return response()->json('No se genero el log',500);
+                return response()->json($savelog['message'],500);
             }
         }else{
             return response()->json("No se pudo crear el pedido bro",500);
@@ -167,10 +180,10 @@ class PreorderController extends Controller
         if($insOr){
             $norder = Order::with('user','state','order.bodie')->where('id',$order)->first();
             $savelog = $this->createLog($status, $typelog, $norder,$ip);
-            if($savelog){
+            if($savelog['log']){
                 return response()->json($norder);
             }else{
-                return response()->json('No se genero el log',500);
+                return response()->json($savelog['message'],500);
             }
         }else{
             return response()->json("No se pudo crear el pedido bro",500);
@@ -216,7 +229,7 @@ class PreorderController extends Controller
         $onWrhs = $request->query('warehouses') ?
         explode(",",$request->query('warehouses')) :
         Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
-        if($order > 0){
+        // if($order > 0){
             $bodie = OrderBodie::with([
                 'product.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
                 'product.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
@@ -225,9 +238,9 @@ class PreorderController extends Controller
                 'unitsupply',
                 'rates'])->where([['_product',$request->_product],['_order',$request->_order]])->first();
             return $bodie;
-        }else{
-            return response()->json('El Producto no necesito de modificacion',200);
-        }
+        // }else{
+            // return response()->json('El Producto no necesito de modificacion',200);
+        // }
     }
 
     public function removeProduct(Request $request){
@@ -251,8 +264,8 @@ class PreorderController extends Controller
         $typelog = 7;
         $ip = $request->ip();
         $create_log = $this->createLog($status, $typelog, $order, $ip, $printer);
-        if($create_log){
-            $order->_state = $create_log;
+        if($create_log['log']){
+            $order->_state = $create_log['status'];
             $order->save();
             $res =$order->load(['store',
             'user',
@@ -262,7 +275,7 @@ class PreorderController extends Controller
 
             return response()->json($res);
         }else{
-            return response()->json('No se genero el log :(',400);
+            return response()->json($create_log['message'],400);
         }
 
 
@@ -295,13 +308,15 @@ class PreorderController extends Controller
             "_type"=>$typelog
         ];
 
-
         $create_log = null;
         switch($status){
             case 1://levantando pedido
                 $create_log= $this->logs($log);
+                $islog = $create_log;
+                $message = 'Log Creado';
             break;
             case 2://Recepcion
+                // se refiere a los pedidos que salen solo en la impresora de preventa para que el cliente lo valide con el valildador ?
                 $validate = $this->verifyProcess($status,$store);
                 if($validate){
                     $create_log= $this->logs($log);
@@ -309,20 +324,31 @@ class PreorderController extends Controller
                     if($order->_order_by){
                         $cash = $order->order['_cash'];
                     } else {
-                        $cash = $this->selectCash($store);
+                        $selectecCash = $this->selectCash($store);
+                        if($selectecCash['message']){
+                            $cash = $selectecCash['cash'];
+                        }else{
+                            $islog = false;
+                            $message = "No hay cajas abiertas";
+                            break;
+                        }
                     }
+
                     $cashier = CashRegister::find($cash);
                     $order = Order::find($order->id);
                     $order->_cash = $cashier->id;
                     $order->save();
                     $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
                     $cellerPrinter->CliOrder($order,$status,$cashier);
+                    $islog = $create_log;
+                    $message = "Status cambiado";
                     break;
                 }else{
                     $status = 3;
                     $log['_state'] = 3;
                 }
             case 3://Por Surtir
+                //se refiere a los pedidos que salen directos en el almacen para ser repartidos entre los almacenistas
                 $validate = $this->verifyProcess($status,$store);
                 if($validate){
                     $create_log= $this->logs($log);
@@ -330,14 +356,24 @@ class PreorderController extends Controller
                     if($order->_order_by){
                         $cash = $order->order['_cash'];
                     } else {
-                        $cash = $this->selectCash($store);
+                        $selectecCash = $this->selectCash($store);
+                        if($selectecCash['message']){
+                            $cash = $selectecCash['cash'];
+                        }else{
+                            $islog = false;
+                            $message = "No hay cajas abiertas";
+                            break;
+                        }
                     }
+
                     $cashier = CashRegister::find($cash);
                     $order = Order::find($order->id);
                     $order->_cash = $cashier->id;
                     $order->save();
                     $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
                     $cellerPrinter->CliOrder($order,$status,$cashier);
+                    $islog = $create_log;
+                    $message = "Status cambiado";
                     break;
                 }else{
                     $status = 4;
@@ -345,6 +381,8 @@ class PreorderController extends Controller
                 }
             case 4://surtiendo//aqui si se debe de revisar que impresora de almacen va a imprimir dependiendo de la caja que tenga
                 $create_log= $this->logs($log);
+                $islog = $create_log;
+                $message = "Status cambiado";
                 // $printer = Printer::find($print);
                 // $cash = $this->selectCash($store);
                 // $cashier = CashRegister::find($cash);
@@ -359,8 +397,13 @@ class PreorderController extends Controller
             break;
 
         }
+        $res = [
+            "log"=>$islog,
+            "message"=>$message,
+            "status"=>$status
+        ];
 
-        return $status;
+        return $res;
     }
 
     public function logs($log){
@@ -382,14 +425,25 @@ class PreorderController extends Controller
 
     public function selectCash($store){
         $cashs = CashRegister::where([['_store',$store],['_state',1]])->get();
-        $cashi = [];
-        foreach($cashs as $cash){
-            $order = Order::whereDate('created_at',date('Y-m-d'))->where([['_cash',$cash->id],['_state','<=',5]])->count();
-            $cashi[$cash->id] = $order;
+        if(count($cashs) > 0){
+            $cashi = [];
+            foreach($cashs as $cash){
+                $order = Order::whereDate('created_at',date('Y-m-d'))->where([['_cash',$cash->id],['_state','<=',5]])->count();
+                $cashi[$cash->id] = $order;
+            }
+            $valmin =  min($cashi);
+            $mininx = array_search($valmin, $cashi);
+            $res = [
+                "message"=>true,
+                "cash"=>$mininx
+            ];
+        }else{
+            $res=[
+                "message"=>false,
+                "cash"=>0
+            ];
         }
-        $valmin =  min($cashi);
-        $mininx = array_search($valmin, $cashi);
-        return $mininx;
+        return $res;
     }
 
 }
