@@ -20,12 +20,13 @@ class CashController extends Controller
 {
     public function getCash(Request $request){
         $store = $request->route('sid');
-        $cashier = USER::where('_store',$store)->whereIn('_rol',[13,14])->get();
+        $cashier = USER::where('_store',$store)->whereNotIn('_state',[3,4])->get();// todos los usuarios de la sucursal que esten disponibles
 
         $cash = CashRegister::with([
             'state',
-            'cashier' => fn($q) => $q->with('user','printer')->whereDate("created_at", date('Y-m-d'))
-            ])->where('_store',$store)->get();
+            'cashier' => fn($q) => $q->with('user','printer')->max('created_at')
+            ])->where([['_store',$store]])->get();
+
         $states = CashState::get();
         $printers = Printer::where([['_store',$store],['_type',1]])->get();
         $cashIds = $cash->pluck('id')->toArray();
@@ -49,7 +50,7 @@ class CashController extends Controller
         $cash = CashRegister::find($cashier['_cash']);
         if($cash){
         try{
-            $url = $ipstore->local_domain.':'.$ipstore->local_port.'/Addicted/public/api/cash/OpenCash';
+            $url = $ipstore->local_domain.':'.$ipstore->local_port.'/addicted/public/api/cash/OpenCash';
             $open = Http::post($url,$cashier);
             if($open->status() == 200){
                $cashier['created_at'] =  $open['fechas'] ;
@@ -62,6 +63,7 @@ class CashController extends Controller
                $cashieradd->created_at = $cashier['created_at'];
                $cashieradd->id_tpv = $cashier['id_tpv'];
                $cashieradd->initial_cash = $cashier['initial_cash'];
+               $cashieradd->number_closures = 0;
                $cashieradd->start_time = $cashier['start_time'];
                $cashieradd->save();
                $res = $cashieradd->fresh()->toArray();
@@ -74,7 +76,7 @@ class CashController extends Controller
                 ]);
                 $maxlog = CashLog::max('id');
                 $log = [
-                    "id"=>$maxlog ? $maxlog : 1,
+                    "id"=>$maxlog ? $maxlog + 1 : 1,
                     "_cash"=>$cash->id,
                     "_state"=>$cash->_state,
                     "details"=>json_encode([
@@ -91,15 +93,65 @@ class CashController extends Controller
                 return response()->json('No se creo la apertura de caja',500);
                }
             }else{
-
+                return response()->json($open,500);
             }
         }catch (\Illuminate\Http\Client\ConnectionException $e){
             $res['ping'] = $e;
         }
-
             return response()->json($res);
         }else{
             return response()->json('No existe la caja',404);
+        }
+    }
+
+    public function closeBox(Request $request){
+        // return $request->all();
+        $store = $request->route('sid');
+        $ipstore = Store::find($store);
+        $closcash  = $request->close;
+        $reqcash = $request->cash;
+        $idcash = $reqcash['id'];
+        $date = $reqcash['cashier']['created_at'];
+        $idtpv = $reqcash['cashier']['id_tpv'];
+
+        $url = $ipstore->local_domain.':'.$ipstore->local_port.'/addicted/public/api/cash/CloseCash';
+        $close = Http::post($url,$request->all());
+
+        return $close;
+
+        $cash = CashRegister::find($idcash);
+        $cash->_state = 2;
+        $cash->save();
+        $cash->fresh();
+
+        if($cash){
+            $upd = [
+                'final_cash' => $closcash['total'],
+                'number_closures' => 1,
+                'end_time' => date('H:i:s'),
+                'details' => json_encode(['Monedas'=>$closcash['Monedas'],'Billetes'=>$closcash['Billetes']])
+            ];
+
+            $cashier = CashCashier::where([['_cash',$idcash],['created_at',$date],['id_tpv',$idtpv]])->update($upd);
+            if($cashier == 1){
+                $res = [
+                    "close"=>true,
+                    "message"=>'Caja cerrada'
+                ];
+                return response()->json($res);
+            }else{
+                $res = [
+                    "close"=>false,
+                    "message"=>'No se logro actualizar la caja'
+                ];
+                return response()->json($res);
+            }
+        }else{
+            $res = [
+                "close"=>false,
+                "message"=>'No se actualizo el estado de la caja x('
+            ];
+            return response()->json($res);
         }
     }
 

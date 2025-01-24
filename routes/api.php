@@ -128,6 +128,7 @@ Route::middleware('kraken')->group(function(){
             Route::prefix('cash')->controller(CashController::class)->group(function(){
                 Route::get('/getCash', 'getCash');
                 Route::post('/OpenCash', 'OpenCash');
+                Route::post('/closeBox', 'closeBox');
             });
             Route::prefix('rrhh')->controller(AssistController::class)->group(function(){
                 Route::get('/justifications', 'Index');
@@ -206,6 +207,10 @@ Route::middleware('kraken')->group(function(){
             Route::post('edit','edit');
             Route::post('addDevice','addDevice');
             Route::post('changeStatus','changeStatus');
+            Route::post('getRegisDevice/{d}','getRegisDevice');
+            Route::post('changeDate/{d}','changeDate');
+            Route::delete('deleteAttendance/{d}','deleteAttendance');
+
         });
         Route::prefix('Indicators')->middleware('UseIndicator')->controller(IndicatorController::class)->group(function(){
             Route::get('index','index');
