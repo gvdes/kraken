@@ -139,69 +139,143 @@ class IndicatorController extends Controller
         }
     }
 
-    public function getFormResp(Request $request, $sid ,$form){
+    // public function getFormResp(Request $request, $sid ,$form){
+    //     $date = now()->format('Y-m-d');
+    //     $month = now()->format('m');
+    //     // return $month;
+    //     $uis = $request->fixeds;
+    //     $userForm = User::with(['rol.area','store'])->where('id',$uis->uid)->first();
+    //     $store = Store::find($sid);
+    //     $getform = Form::with('type','responsible','user','question.type','question.options')->where('id',$form)->first();
+    //     $users = User::all();
+    //     if($users){
+    //         if($getform->_type == 1 || $getform->_type == 2) {
+    //             $responses = FormResponse::where([['_form',$getform->id],['_store',$sid]])->whereDate('created_at', $date)->get();
+    //         }else if($getform->_type == 3){
+    //             $responses = FormResponse::where([['_form',$getform->id],['_user',$uis->uid]])->whereMonth('created_at', $month)->get();
+    //         }
+    //         if(count($responses) >= 1){
+    //             return response()->json('Ya se respondio este formulario ya no esta disponible',401);
+    //         }else{
+    //             if($getform->_active == 1){
+    //                 if(in_array($uis->rol,[9,10,41]) && $getform->_responsible == 3 || $getform->_responsible == 1){
+    //                     if($store->_type == 1 ){
+    //                         if($getform->_type == 2 || $getform->_type == 3){
+    //                             $res = [
+    //                                 "usuarios"=>$users,
+    //                                 "formulario"=>$getform,
+    //                             ];
+    //                             return response()->json($res,200);
+    //                         }else{
+    //                             return response()->json('No correspondes a la sucursal de el formulario',401);
+    //                         }
+    //                     }else{
+    //                         if($getform->_type == 1 || $getform->_type == 3){
+    //                             $res = [
+    //                                 "usuarios"=>$users,
+    //                                 "formulario"=>$getform,
+    //                             ];
+    //                             return response()->json($res,200);
+    //                         }else{
+    //                             return response()->json('No correspondes a la sucursal de el formulario',401);
+    //                         }
+    //                     }
+    //                 } else if(in_array($userForm->rol['area']['id'],[1, 5, 7, 8]) && $getform->_responsible == 3 || $getform->_responsible == 1 || $getform->_responsible == 2){
+    //                     $res = [
+    //                         "usuarios"=>$users,
+    //                         "formulario"=>$getform,
+    //                     ];
+    //                     return response()->json($res,200);
+    //                 }else if($getform->_responsible == 1){
+    //                     $res = [
+    //                         "usuarios"=>$users,
+    //                         "formulario"=>$getform,
+    //                     ];
+    //                     return response()->json($res,200);
+    //                 }else{
+    //                     return response()->json('No puedes responder este formulario',401);
+    //                 }
+    //             }else{
+    //                 return response()->json('No esta disponible el formulario',401);
+    //             }
+    //         }
+    //     }else{
+    //         return response()->json("No hay ningun Usuario",404);
+    //     }
+    // }
+
+    public function getFormResp(Request $request, $sid, $form)
+    {
         $date = now()->format('Y-m-d');
         $month = now()->format('m');
-        // return $month;
         $uis = $request->fixeds;
-        $userForm = User::with(['rol.area','store'])->where('id',$uis->uid)->first();
+
+        // Obtener información del usuario y la tienda
+        $userForm = User::with(['rol', 'store'])->where('id', $uis->uid)->first();
         $store = Store::find($sid);
-        $getform = Form::with('type','responsible','user','question.type','question.options')->where('id',$form)->first();
+        $getform = Form::with('type', 'responsible', 'user', 'question.type', 'question.options')->where('id', $form)->first();
         $users = User::all();
-        if($users){
-            if($getform->_type == 1 || $getform->_type == 2) {
-                $responses = FormResponse::where([['_form',$getform->id],['_store',$sid]])->whereDate('created_at', $date)->get();
-            }else if($getform->_type == 3){
-                $responses = FormResponse::where([['_form',$getform->id],['_user',$uis->uid]])->whereMonth('created_at', $month)->get();
-            }
-            if(count($responses) >= 1){
-                return response()->json('Ya se respondio este formulario ya no esta disponible',401);
-            }else{
-                if($getform->_active == 1){
-                    if(in_array($uis->rol,[9,10,41]) && $getform->_responsible == 3 || $getform->_responsible == 1){
-                        if($store->_type == 1 ){
-                            if($getform->_type == 2 || $getform->_type == 3){
-                                $res = [
-                                    "usuarios"=>$users,
-                                    "formulario"=>$getform,
-                                ];
-                                return response()->json($res,200);
-                            }else{
-                                return response()->json('No correspondes a la sucursal de el formulario',401);
-                            }
-                        }else{
-                            if($getform->_type == 1 || $getform->_type == 3){
-                                $res = [
-                                    "usuarios"=>$users,
-                                    "formulario"=>$getform,
-                                ];
-                                return response()->json($res,200);
-                            }else{
-                                return response()->json('No correspondes a la sucursal de el formulario',401);
-                            }
-                        }
-                    } else if(in_array($userForm->rol['area']['id'],[1, 5, 7, 8]) && $getform->_responsible == 3 || $getform->_responsible == 1 || $getform->_responsible == 2){
-                        $res = [
-                            "usuarios"=>$users,
-                            "formulario"=>$getform,
-                        ];
-                        return response()->json($res,200);
-                    }else if($getform->_responsible == 1){
-                        $res = [
-                            "usuarios"=>$users,
-                            "formulario"=>$getform,
-                        ];
-                        return response()->json($res,200);
-                    }else{
-                        return response()->json('No puedes responder este formulario',401);
+
+        if (!$users) {
+            return response()->json("No hay ningún usuario", 404);
+        }
+
+        // Verificar si el formulario ya fue respondido
+        $responses = [];
+        if ($getform->_type == 1 || $getform->_type == 2) {
+            $responses = FormResponse::where([['_form', $getform->id], ['_store', $sid]])->whereDate('created_at', $date)->get();
+        } elseif ($getform->_type == 3) {
+            $responses = FormResponse::where([['_form', $getform->id], ['_user', $uis->uid]])->whereMonth('created_at', $month)->get();
+        }
+
+        if (count($responses) >= 1) {
+            return response()->json('Ya se respondió este formulario, ya no está disponible', 401);
+        }
+
+        if ($getform->_active != 1) {
+            return response()->json('El formulario no está disponible', 401);
+        }
+
+        // Lógica principal ajustada
+        $userHierarchy = $userForm->rol['hierarchy'];
+        $userTypeRol = $userForm->rol['type_rol'];
+
+        if (in_array($userHierarchy, [1, 2])) {
+            // Jerarquía 1 o 2
+            if ($userTypeRol == 2) {
+                // Tipo de rol 2
+                if ($store->_type == 1 && in_array($getform->_type, [2, 3])) {
+                    if (in_array($getform->_responsible, [1, 3])) {
+                        return $this->formatResponse($users, $getform);
                     }
-                }else{
-                    return response()->json('No esta disponible el formulario',401);
+                } elseif (in_array($getform->_type, [1, 3])) {
+                    if (in_array($getform->_responsible, [1, 3])) {
+                        return $this->formatResponse($users, $getform);
+                    }
+                }
+            } else {
+                // Otros tipos de rol
+                if ($getform->_responsible == 1 && $getform->_type == 3) {
+                    return $this->formatResponse($users, $getform);
                 }
             }
-        }else{
-            return response()->json("No hay ningun Usuario",404);
+        } elseif ($userHierarchy == 0) {
+            // Jerarquía 0
+            if (in_array($getform->_responsible, [1, 2, 3])) {
+                return $this->formatResponse($users, $getform);
+            }
         }
+
+        return response()->json('No puedes responder este formulario', 401);
+    }
+
+    // Función para formatear la respuesta
+    private function formatResponse($users, $form)
+    {
+        return response()->json([
+            "usuarios" => $users,
+            "formulario" => $form,
+        ], 200);
     }
 
     public function changeStatus(Request $request){
