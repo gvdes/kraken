@@ -145,7 +145,7 @@ class AssistController extends Controller
     }
 
     public function getJustifications(){
-        $justifications = AssistJustification::with('user','paymen','type','state')->get();
+        $justifications = AssistJustification::with('user','paymen','type','state')->where('evidence','!=','')->get();
 
         foreach($justifications as $justification){
             $userId = $justification['_user'];

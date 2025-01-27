@@ -204,8 +204,7 @@ class IndicatorController extends Controller
     //     }
     // }
 
-    public function getFormResp(Request $request, $sid, $form)
-    {
+    public function getFormResp(Request $request, $sid, $form){
         $date = now()->format('Y-m-d');
         $month = now()->format('m');
         $uis = $request->fixeds;
@@ -269,9 +268,7 @@ class IndicatorController extends Controller
         return response()->json('No puedes responder este formulario', 401);
     }
 
-    // Función para formatear la respuesta
-    private function formatResponse($users, $form)
-    {
+    private function formatResponse($users, $form){
         return response()->json([
             "usuarios" => $users,
             "formulario" => $form,
