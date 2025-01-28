@@ -11,7 +11,9 @@ use App\Models\JustificationType;
 use App\Models\PaymenPercentage;
 use App\Models\User;
 use App\Models\Assist;
+use App\Models\ViewReportWeek;
 use Rats\Zkteco\Lib\ZKTeco;
+use Illuminate\Support\Facades\DB;
 
 class AssistController extends Controller
 {
@@ -111,7 +113,6 @@ class AssistController extends Controller
         ];
         return response()->json($res);
     }
-
 
     public function addForm(Request $request){
         $jstf = $request->all();
@@ -288,6 +289,20 @@ class AssistController extends Controller
             ] ;
             return response()->json($res,401);
         }
+    }
+
+    public function getReportWeek(){
+        $report = ViewReportWeek::select('*',
+        DB::raw('faltas(LUNES) +  faltas(MARTES) +faltas(MIERCOLES) +faltas(JUEVES) +faltas(VIERNES) +faltas(SABADO) +faltas(DOMINGO)  AS FALTAS'),
+        DB::raw('retardos(LUNES) + retardos(MARTES) + retardos(MIERCOLES) + retardos(JUEVES) + retardos(VIERNES) + retardos(SABADO) + retardos(DOMINGO) AS RETARDOS'),
+        DB::raw('vacaciones(LUNES) + vacaciones(MARTES) + vacaciones(MIERCOLES) + vacaciones(JUEVES) + vacaciones(VIERNES) + vacaciones(SABADO) + vacaciones(DOMINGO)  AS VACACIONES'))
+        ->get();
+        $devices = AssistDevice::all();
+        $res = [
+            "report"=>$report,
+            "devices"=>$devices
+        ];
+        return response()->json($res,200);
     }
 
 }

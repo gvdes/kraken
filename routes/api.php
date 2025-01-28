@@ -202,6 +202,7 @@ Route::middleware('kraken')->group(function(){
             Route::get('index','index');
             Route::get('new','new');
             Route::get('getJustifications','getJustifications');
+            Route::get('getReportWeek','getReportWeek');
             Route::get('pingNew/{d}','pingNew');
             Route::get('ping/{d}','ping');
             Route::post('edit','edit');
