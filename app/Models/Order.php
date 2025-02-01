@@ -15,5 +15,7 @@ class Order extends Model
     public function client(){return $this->belongsTo('\App\Models\Client','_client','id'); }
     public function order(){return $this->belongsTo(Order::class,'_order_by','id'); }
     public function bodie(){return $this->hasMany('\App\Models\OrderBodie','_order','id'); }
+    public function cash(){return $this->belongsTo('\App\Models\CashRegister','_cash','id'); }
+
 
 }

@@ -11,6 +11,7 @@ use App\Models\JustificationType;
 use App\Models\PaymenPercentage;
 use App\Models\User;
 use App\Models\Assist;
+use App\Models\Proceeding;
 use App\Models\ViewReportWeek;
 use Rats\Zkteco\Lib\ZKTeco;
 use Illuminate\Support\Facades\DB;
@@ -303,6 +304,16 @@ class AssistController extends Controller
             "devices"=>$devices
         ];
         return response()->json($res,200);
+    }
+
+    public function addProceedings(Request $request){
+        $insert =  $request->all();
+        $adding = Proceeding::insert($insert);
+        if($adding){
+            return response()->json('Se inserto el acta',200);
+        }else{
+            return response()->json('No se inserto el acta',500);
+        }
     }
 
 }

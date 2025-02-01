@@ -111,8 +111,9 @@ Route::middleware('kraken')->group(function(){
 
             Route::prefix('orders')->controller(PreorderController::class)->group(function(){
                 Route::get('/', 'index');
+                Route::get('/getOrdersCheckin','getOrdersCheckin');
                 Route::get('/getConfig', 'getConfig');
-                Route::get('getOrderforuser', 'getOrderforuser');
+                Route::get('/getOrderforuser', 'getOrderforuser');
                 Route::get('/getPrints/{type}', 'getPrints');
                 Route::get('/{oid}', 'getOrder');
                 Route::post('/getOrders', 'getOrders');
@@ -158,9 +159,7 @@ Route::middleware('kraken')->group(function(){
     });
 
 
-    Route::prefix('cluster')
-    // ->middleware('cluster')
-    ->group(function(){
+    Route::prefix('cluster')->group(function(){
         Route::prefix('accounts')->controller(UsersController::class)->group(function(){
             Route::patch('fullreset','fullReset');
             Route::get('users','index');
@@ -206,6 +205,7 @@ Route::middleware('kraken')->group(function(){
             Route::get('pingNew/{d}','pingNew');
             Route::get('ping/{d}','ping');
             Route::post('edit','edit');
+            Route::post('addProceedings','addProceedings');
             Route::post('addDevice','addDevice');
             Route::post('changeStatus','changeStatus');
             Route::post('getRegisDevice/{d}','getRegisDevice');
@@ -228,8 +228,6 @@ Route::middleware('kraken')->group(function(){
             Route::get('getForms','getForms');
             Route::get('getForm/{form}','getFormResp');
         });
-
-
     });
 
     Route::prefix('vmedia')

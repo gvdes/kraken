@@ -38,14 +38,26 @@ class PreorderController extends Controller
         $to =  $request->to;
         $from =  $request->from;
         $store = $request->route('sid');
-        $preorders = Order::with('user','state','order')->where('_store', $store)->whereDate('created_at','>=',$from)->whereDate('created_at','<=',$to)->get();
+        $preorders = Order::with('user','state','order','cash')->where('_store', $store)->whereDate('created_at','>=',$from)->whereDate('created_at','<=',$to)->get();
         return response()->json($preorders,200);
     }
 
     public function getOrdersCheckin(Request $request){
         $store = $request->route('sid');
+        $onWrhs = $request->query('warehouses') ?
+        explode(",",$request->query('warehouses')) :
+        Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
+        $store = $request->route('sid');
         $user =  $request->fixeds->uid;
-        $preorders = Order::with('user','state','order')->where([['_store',$store],['_created_by',$user]])->whereDate('created_at',now())->get();
+        $preorders = Order::with(['user',
+        'state',
+        'order',
+        'cash',
+        'bodie.product.stocks' => fn($q) => $q->whereHas('warehouse', fn($q) => $q->where('_type', 1))
+            ->with('warehouse')->whereIn("_warehouse", $onWrhs),
+        'bodie.product.locations' => fn($q) => $q->whereHas('warehouse', fn($q) => $q->where('_type', ))
+            ->with("warehouse")->whereIn("_warehouse", $onWrhs)
+        ])->where([['_store',$store]])->whereDate('created_at',now())->get();
         $clients = Client::where([['_type',2],['_state',1]])->get();
         $res = [
             "sid"=>$store,
@@ -59,13 +71,13 @@ class PreorderController extends Controller
         $id = $request->route('oid');
         $store = $request->route('sid');
         $suc = Store::find($store); // obtiene la sucursal
+        // $user = $request->fixeds->uid;
 
         $onWrhs = $request->query('warehouses') ?
         explode(",",$request->query('warehouses')) :
         Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
 
         $order = Order::with([
-
             'order.bodie.product.category.familia.seccion',
             'order.bodie.product.measure',
             'order.bodie.unitsupply',
@@ -93,6 +105,7 @@ class PreorderController extends Controller
             return response()->json("No se encontro el pedido $id",404);
         }
     }
+
     public function getOrderforuser(Request $request){
         $store = $request->route('sid');
         $user = $request->fixeds->uid;
@@ -253,12 +266,22 @@ class PreorderController extends Controller
     }
 
     public function changeStatus(Request $request){
-        $order = Order::with(
+        $store = $request->route('sid');
+        $onWrhs = $request->query('warehouses') ?
+        explode(",",$request->query('warehouses')) :
+        Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
+        $order = Order::with([
             'store',
             'user',
             'state',
             'bodie.product.category.familia.seccion',
-            'bodie.rates')->where('id',$request->id)->first();
+            'bodie.rates',
+            'cash' => fn($q) => $q->with(['cashier.printer_order'])->max('created_at'),
+            'bodie.product.stocks' => fn($q) => $q->whereHas('warehouse', fn($q) => $q->where('_type', 1))
+                ->with('warehouse')->whereIn("_warehouse", $onWrhs),
+            'bodie.product.locations' => fn($q) => $q->whereHas('warehouse', fn($q) => $q->where('_type', 1))
+                ->with("warehouse")->whereIn("_warehouse", $onWrhs)
+        ])->where('id',$request->id)->first();
         $status = $request->_state + 1;
         $printer = isset($request->printer) ? $request->printer : null ;
         $typelog = 7;
@@ -267,18 +290,17 @@ class PreorderController extends Controller
         if($create_log['log']){
             $order->_state = $create_log['status'];
             $order->save();
-            $res =$order->load(['store',
+            $res =$order->fresh(['store',
             'user',
             'state',
             'bodie.product.category.familia.seccion',
-            'bodie.rates']);
+            'bodie.rates',
+            'cash']);
 
             return response()->json($res);
         }else{
             return response()->json($create_log['message'],400);
         }
-
-
     }
 
     public function getPrints(Request $request){
@@ -351,29 +373,37 @@ class PreorderController extends Controller
                 //se refiere a los pedidos que salen directos en el almacen para ser repartidos entre los almacenistas
                 $validate = $this->verifyProcess($status,$store);
                 if($validate){
-                    $create_log= $this->logs($log);
-                    $printer = Printer::find($print);
-                    if($order->_order_by){
-                        $cash = $order->order['_cash'];
-                    } else {
-                        $selectecCash = $this->selectCash($store);
-                        if($selectecCash['message']){
-                            $cash = $selectecCash['cash'];
-                        }else{
-                            $islog = false;
-                            $message = "No hay cajas abiertas";
-                            break;
+                    $create_log= $this->logs($log);//se genera el log de el pedido
+                    if(is_null($order['_cash'])){
+                        $printer = Printer::find($print);
+                        if($order->_order_by){
+                            $cash = $order->order['_cash'];
+                        } else {
+                            $selectecCash = $this->selectCash($store);
+                            if($selectecCash['message']){
+                                $cash = $selectecCash['cash'];
+                            }else{
+                                $islog = false;
+                                $message = "No hay cajas abiertas";
+                                break;
+                            }
                         }
+                        $cashier = CashRegister::find($cash);
+                        $order = Order::find($order->id);
+                        $order->_cash = $cashier->id;
+                        $order->save();
+                        $order->fresh(['cash' => fn($q) => $q->with(['cashier.printer_order'])->max('created_at')]);
+                        $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
+                        $cellerPrinter->CliOrder($order,$status,$cashier);
                     }
 
-                    $cashier = CashRegister::find($cash);
-                    $order = Order::find($order->id);
-                    $order->_cash = $cashier->id;
-                    $order->save();
+                    $printer = Printer::find($order['cash']['cashier']['_printer_order']);// se obtinene la impresora por la que saldran los pedidos de la caja seleccionada
+                    $cashier = CashRegister::find($order['cash']['id']);// se obtinene la caja
                     $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
-                    $cellerPrinter->CliOrder($order,$status,$cashier);
+                    $cellerPrinter->orderReceip($order,$status,$cashier);
                     $islog = $create_log;
                     $message = "Status cambiado";
+
                     break;
                 }else{
                     $status = 4;

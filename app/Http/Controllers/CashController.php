@@ -24,11 +24,11 @@ class CashController extends Controller
 
         $cash = CashRegister::with([
             'state',
-            'cashier' => fn($q) => $q->with('user','printer')->max('created_at')
+            'cashier' => fn($q) => $q->with('user','printer','printer_order')->max('created_at')
             ])->where([['_store',$store]])->get();
 
         $states = CashState::get();
-        $printers = Printer::where([['_store',$store],['_type',1]])->get();
+        $printers = Printer::where([['_store',$store]])->get();
         $cashIds = $cash->pluck('id')->toArray();
         $automate = CashAutomate::with('cash','user','printer')->whereIn('_cash',$cashIds)->get();
         $res = [
@@ -59,7 +59,8 @@ class CashController extends Controller
                $cashieradd = new CashCashier();
                $cashieradd->_cashier = $cashier['_cashier']['id'];
                $cashieradd->_cash = $cashier['_cash'];
-               $cashieradd->_printer = $cashier['_printer']['id'];
+               $cashieradd->_printer_tck = $cashier['_printer_tck']['id'];
+               $cashieradd->_printer_order = $cashier['_printer_order']['id'];
                $cashieradd->created_at = $cashier['created_at'];
                $cashieradd->id_tpv = $cashier['id_tpv'];
                $cashieradd->initial_cash = $cashier['initial_cash'];
@@ -116,42 +117,43 @@ class CashController extends Controller
 
         $url = $ipstore->local_domain.':'.$ipstore->local_port.'/addicted/public/api/cash/CloseCash';
         $close = Http::post($url,$request->all());
+        if($close->status() == 200){
+            $cash = CashRegister::find($idcash);
+            $cash->_state = 2;
+            $cash->save();
+            $cash->fresh();
 
-        return $close;
-
-        $cash = CashRegister::find($idcash);
-        $cash->_state = 2;
-        $cash->save();
-        $cash->fresh();
-
-        if($cash){
-            $upd = [
-                'final_cash' => $closcash['total'],
-                'number_closures' => 1,
-                'end_time' => date('H:i:s'),
-                'details' => json_encode(['Monedas'=>$closcash['Monedas'],'Billetes'=>$closcash['Billetes']])
-            ];
-
-            $cashier = CashCashier::where([['_cash',$idcash],['created_at',$date],['id_tpv',$idtpv]])->update($upd);
-            if($cashier == 1){
-                $res = [
-                    "close"=>true,
-                    "message"=>'Caja cerrada'
+            if($cash){
+                $upd = [
+                    'final_cash' => $closcash['total'],
+                    'number_closures' => 1,
+                    'end_time' => date('H:i:s'),
+                    'details' => json_encode(['Monedas'=>$closcash['Monedas'],'Billetes'=>$closcash['Billetes']])
                 ];
-                return response()->json($res);
+
+                $cashier = CashCashier::where([['_cash',$idcash],['created_at',$date],['id_tpv',$idtpv]])->update($upd);
+                if($cashier == 1){
+                    $res = [
+                        "close"=>true,
+                        "message"=>'Caja cerrada'
+                    ];
+                    return response()->json($res);
+                }else{
+                    $res = [
+                        "close"=>false,
+                        "message"=>'No se logro actualizar la caja'
+                    ];
+                    return response()->json($res);
+                }
             }else{
                 $res = [
                     "close"=>false,
-                    "message"=>'No se logro actualizar la caja'
+                    "message"=>'No se actualizo el estado de la caja x('
                 ];
                 return response()->json($res);
             }
         }else{
-            $res = [
-                "close"=>false,
-                "message"=>'No se actualizo el estado de la caja x('
-            ];
-            return response()->json($res);
+            return responser()->json($close,500);
         }
     }
 
