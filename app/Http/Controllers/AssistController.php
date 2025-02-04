@@ -11,6 +11,7 @@ use App\Models\JustificationType;
 use App\Models\PaymenPercentage;
 use App\Models\User;
 use App\Models\Assist;
+use App\Models\Turn;
 use App\Models\Proceeding;
 use App\Models\ViewReportWeek;
 use Rats\Zkteco\Lib\ZKTeco;
@@ -314,6 +315,60 @@ class AssistController extends Controller
         }else{
             return response()->json('No se inserto el acta',500);
         }
+    }
+
+    public function getTurnsWeek(Request $request){
+        $sid = $request->route('sid');
+        $staff = User::where('_store',$sid)->get();
+        $turn = Turn::with([
+            'users' ])
+        ->whereHas('users', function($q) use ($sid) { $q->where('_store', $sid);
+        })->whereRaw('_week = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)')
+        ->whereRaw('_year = YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))')
+        ->get();
+        $res = [
+            "users"=>$staff,
+            "turns"=>$turn
+        ];
+        return response()->json($res);
+    }
+
+    public function addTurnsWeek(Request $request){
+        $goals = [
+            'eliminado'=>[],
+            'creado'=>[]
+        ];
+        $fails = [];
+
+        $turnos = $request->turns;
+        // return $turnos;
+        foreach($turnos as $turno){
+            $exitTurn = Turn::where([['_user',$turno['_user']],['hour_hand',$turno['hour_hand']]])->whereRaw('_week = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)')
+            ->whereRaw('_year = YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))')->first();
+            if($exitTurn){
+                $fails[]=$turno;
+            }else{
+                $busTurn = Turn::where('_user', $turno['_user'])
+                ->whereRaw('_week = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)')
+                ->whereRaw('_year = YEAR(CURDATE())')
+                ->delete();
+                if($busTurn){
+                    $goals['eliminado'][] = $turno;
+                }
+                $goals['creado'][] = $turno;
+                Turn::create([
+                    '_week' => DB::raw('WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)'),
+                    '_year' => DB::raw('YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))'),
+                    '_user' => $turno['_user'],
+                    'hour_hand' => $turno['hour_hand']
+                ]);
+            }
+        }
+        $res = [
+            "goals"=>$goals,
+            "fails"=>$fails
+        ];
+        return response()->json($res);
     }
 
 }

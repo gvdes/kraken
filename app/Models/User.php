@@ -28,4 +28,6 @@ class User extends Model
     public function rol(){ return $this->hasOne('App\Models\UserRol','id','_rol'); }
 
     public function apps(){ return $this->hasMany('App\Models\UserApps','_user'); }
+
+    public function turns(){ return $this->hasMany('App\Models\Turn','_user');}
 }

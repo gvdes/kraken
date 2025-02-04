@@ -134,9 +134,10 @@ Route::middleware('kraken')->group(function(){
             Route::prefix('rrhh')->controller(AssistController::class)->group(function(){
                 Route::get('/justifications', 'Index');
                 Route::get('/form', 'form');
+                Route::get('/getTurnsWeek', 'getTurnsWeek');
+                Route::post('/addTurnsWeek', 'addTurnsWeek');
                 Route::post('/addFile', 'addFile');
                 Route::post('/addForm', 'addForm');
-
             });
             Route::prefix('resp/form')->controller(IndicatorController::class)->group(function(){
                 Route::get('/{form}','getFormResp');
