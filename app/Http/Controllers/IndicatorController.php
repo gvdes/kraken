@@ -239,7 +239,7 @@ class IndicatorController extends Controller
         $userHierarchy = $userForm->rol['hierarchy'];
         $userTypeRol = $userForm->rol['type_rol'];
 
-        if (in_array($userHierarchy, [1, 2])) {
+        if (in_array($userHierarchy, [1, 2 , 3])) {
             // Jerarquía 1 o 2
             if ($userTypeRol == 2) {
                 // Tipo de rol 2

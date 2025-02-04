@@ -139,6 +139,9 @@ Route::middleware('kraken')->group(function(){
                 Route::post('/addFile', 'addFile');
                 Route::post('/addForm', 'addForm');
             });
+            Route::prefix('users')->controller(UsersController::class)->group(function(){
+                Route::get('/getUserForStore', 'getUserForStore');
+            });
             Route::prefix('resp/form')->controller(IndicatorController::class)->group(function(){
                 Route::get('/{form}','getFormResp');
                 Route::post('/addResponse','addResponse');
