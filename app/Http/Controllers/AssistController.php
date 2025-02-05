@@ -545,6 +545,7 @@ class AssistController extends Controller
                     $zk->disconnect();
                     $res = ["goals"=>$goals, "fails"=>$fails , "Dispositivo" => $device->nick_name, 'tiempo'=>round($termino-$inicio,2)];
                     echo json_encode($res)." \n";
+
                 }else{
                     $termino = microtime(true);
                     $message = 'El dispositivo '.$device->nick_name.' no tiene conexion :('." \n";
@@ -556,6 +557,8 @@ class AssistController extends Controller
                     }
                 }
             }
+            $goals=[];
+            $fails=[];
         }else{
             echo 'No hay Dispositivos brou';
         }
