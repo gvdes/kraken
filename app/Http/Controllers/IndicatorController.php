@@ -221,8 +221,10 @@ class IndicatorController extends Controller
 
         // Verificar si el formulario ya fue respondido
         $responses = [];
-        if ($getform->_type == 1 || $getform->_type == 2) {
+        if ($getform->_type == 1 ) {
             $responses = FormResponse::where([['_form', $getform->id], ['_store', $sid]])->whereDate('created_at', $date)->get();
+        } else if($getform->_type == 2){
+            $responses = 0;
         } elseif ($getform->_type == 3) {
             $responses = FormResponse::where([['_form', $getform->id], ['_user', $uis->uid]])->whereMonth('created_at', $month)->get();
         }
