@@ -536,6 +536,8 @@ class AssistController extends Controller
                             // return $report;
                             if($insert){
                                 $goals = $device->nick_name." se insertaron ".count($report)." registros";
+                            }else{
+                                $fails = $device->nick_name." se insertaron ".count($report)." registros";
                             }
                         }else{
                             $goals = $device->nick_name." No hay registros";
@@ -556,9 +558,10 @@ class AssistController extends Controller
                         echo 'No se envio el mensaje'." \n";
                     }
                 }
+                $goals=[];
+                $fails=[];
             }
-            $goals=[];
-            $fails=[];
+
         }else{
             echo 'No hay Dispositivos brou';
         }
