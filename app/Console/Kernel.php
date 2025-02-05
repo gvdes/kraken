@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Console;
+use App\Http\Controllers\AssistController;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
@@ -15,7 +16,15 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->call(function () {
+            $controller = new AssistController();
+            $controller->ReplyAssistAut();
+        })->everyTenMinutes()->between('09:00', '10:30')->name("Replicacion de asistencia cada 5 min");//Respaldo solo de el ejercico actual
+
+        $schedule->call(function () {
+            $controller = new AssistController();
+            $controller->ReplyAssistAut();
+        })->everyTwoHours($minutes = 0)->between('09:00', '10:30')->name("Replicacion de asistencia cada 2 horas");//Respaldo solo de el ejercico actual
     }
 
     /**
@@ -23,10 +32,10 @@ class Kernel extends ConsoleKernel
      *
      * @return void
      */
-    protected function commands()
-    {
-        $this->load(__DIR__.'/Commands');
+    // protected function commands()
+    // {
+    //     $this->load(__DIR__.'/Commands');
 
-        require base_path('routes/console.php');
-    }
+    //     require base_path('routes/console.php');
+    // }
 }

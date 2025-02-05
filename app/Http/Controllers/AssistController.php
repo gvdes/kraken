@@ -487,4 +487,115 @@ class AssistController extends Controller
         }
     }
 
+    public function ReplyAssistAut(){
+        $goals = [];
+        $fails = [];
+        $report = [];
+        $devices = AssistDevice::with('store')->get();
+        if(count($devices) > 0 ){
+            foreach($devices as $device){
+                $inicio = microtime(true);
+                echo 'actualizando '.$device->nick_name." \n";
+                $zk = new ZKTeco($device->ip);
+                $exist = Assist::with('user')->where('_device',$device->id)->get()->toArray();
+                $rexist  = array_map(function($val)
+                { return [
+                        'auid'=>$val['auid'],
+                        'id'=>$val['user']['RC_id'],
+                        'state'=>$val['_class'],
+                        'timestamp'=>$val['register'],
+                        'type'=>$val['_type']
+                    ];
+                },$exist);
+
+                if($zk->connect()){
+                     $assists = $zk->getAttendance();
+                    if($assists){
+                        $dev = array_map(function($val){return implode(',',$val);},$assists);
+                        $dba = array_map(function($val){return implode(',',(array)$val);},$rexist);
+                        $diff = array_diff($dev, $dba);
+                        $vdiff = array_values($diff);
+                        $diferencias = array_map(function($val){ return explode(',',$val);} ,$vdiff);
+                        // return $diferencias;
+                        if($diferencias){
+                            foreach($diferencias as $assist){
+                                $user = User::where('RC_id',$assist[1])->first();
+                                if($user){
+                                    $report [] = [
+                                        "auid" => $assist['0'],//id checada checador
+                                        "register" => $assist['3'], //horario
+                                        "_user" => $user->id,//id del usuario
+                                        "_store"=> $device->_store,
+                                        "_type"=>$assist['4'],//entrada y salida
+                                        "_class"=>$assist['2'],//condedo o contrasena
+                                        "_device"=>$device->id,
+                                    ];
+                                }
+                            }
+                            $insert = Assist::insert($report);
+                            // return $report;
+                            if($insert){
+                                $goals = $device->nick_name." se insertaron ".count($report)." registros";
+                            }
+                        }else{
+                            $goals = $device->nick_name." No hay registros";
+                        }
+                    }
+                    $termino = microtime(true);
+                    $zk->disconnect();
+                    $res = ["goals"=>$goals, "fails"=>$fails , "Dispositivo" => $device->nick_name, 'tiempo'=>round($termino-$inicio,2)];
+                    echo json_encode($res)." \n";
+                }else{
+                    $termino = microtime(true);
+                    $message = 'El dispositivo '.$device->nick_name.' no tiene conexion :('." \n";
+                    $msg = $this->msg($message);
+                    if($msg){
+                        echo 'Mensaje Enviado'.' tiempo :'.round($termino-$inicio)." \n";
+                    }else{
+                        echo 'No se envio el mensaje'." \n";
+                    }
+                }
+            }
+        }else{
+            echo 'No hay Dispositivos brou';
+        }
+    }
+
+    public function msg($message){
+        $token = env('MSG_TKN');
+        $instance = env('MSG_INS');
+        $params=array(
+            'token' => $token ,
+            'to' => '5573461022',
+            'body' => $message
+            );
+            $curl = curl_init();
+            curl_setopt_array($curl, array(
+              CURLOPT_URL => "https://api.ultramsg.com/".$instance."/messages/chat",
+              CURLOPT_RETURNTRANSFER => true,
+              CURLOPT_ENCODING => "",
+              CURLOPT_MAXREDIRS => 10,
+              CURLOPT_TIMEOUT => 30,
+              CURLOPT_SSL_VERIFYHOST => 0,
+              CURLOPT_SSL_VERIFYPEER => 0,
+              CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+              CURLOPT_CUSTOMREQUEST => "POST",
+              CURLOPT_POSTFIELDS => http_build_query($params),
+              CURLOPT_HTTPHEADER => array(
+                "content-type: application/x-www-form-urlencoded"
+              ),
+            ));
+
+            $response = curl_exec($curl);
+            $err = curl_error($curl);
+
+            curl_close($curl);
+
+            if ($err) {
+                return false;
+            } else {
+                return true;
+            }
+    }
+
 }
