@@ -26,6 +26,37 @@ class AssistController extends Controller
 
     public function ping($d){
         $device = AssistDevice::find($d);
+        // return $d;
+        $zk = new ZKTeco($device->ip);
+
+        if($zk->connect()){
+            $date = $zk->getTime();
+            $current = date('Y-m-d H:i:s');
+            $register = $zk->getAttendance();
+            $res = [
+                "connect"=>true,
+                "date"=>$date,
+                "register"=>count($register),
+                "current" => $current
+            ];
+            $zk->disconnect();
+            return response()->json($res,200);
+        }else{
+            $res = [
+                "connect"=>false,
+                "date"=>'Sin Conexion',
+                "register"=>'Sin Conexion',
+                "current"=>"Sin Conexion"
+            ];
+            // $zk->disconnect();
+            return response()->json($res,200);
+        }
+
+    }
+
+    public function pingStore($sid,$d){
+        $device = AssistDevice::find($d);
+        // return $d;
         $zk = new ZKTeco($device->ip);
 
         if($zk->connect()){
@@ -369,6 +400,91 @@ class AssistController extends Controller
             "fails"=>$fails
         ];
         return response()->json($res);
+    }
+    public function getRegisDeviceStore($sid,$d){
+        $goals = [];
+        $fails = [];
+        $report = [];
+        $device = AssistDevice::find($d);
+        $zk = new ZKTeco($device->ip);
+        $exist = Assist::with('user')->where('_device',$device->id)->get()->toArray();
+        $rexist  = array_map(function($val)
+        {
+            return [
+                'auid'=>$val['auid'],
+                'id'=>$val['user']['RC_id'],
+                'state'=>$val['_class'],
+                'timestamp'=>$val['register'],
+                'type'=>$val['_type']
+            ];
+        }
+                ,$exist);
+        if($zk->connect()){
+             $assists = $zk->getAttendance();
+            if($assists){
+                $dev = array_map(function($val){return implode(',',$val);},$assists);
+                $dba = array_map(function($val){return implode(',',(array)$val);},$rexist);
+                $diff = array_diff($dev, $dba);
+                $vdiff = array_values($diff);
+                $diferencias = array_map(function($val){ return explode(',',$val);} ,$vdiff);
+                // return $diferencias;
+                if($diferencias){
+                    foreach($diferencias as $assist){
+                        $user = User::where('RC_id',$assist[1])->first();
+                        if($user){
+                            $report [] = [
+                                "auid" => $assist['0'],//id checada checador
+                                "register" => $assist['3'], //horario
+                                "_user" => $user->id,//id del usuario
+                                "_store"=> $device->_store,
+                                "_type"=>$assist['4'],//entrada y salida
+                                "_class"=>$assist['2'],//condedo o contrasena
+                                "_device"=>$device->id,
+                            ];
+                        }else{
+                            // $finduser = $zk->getUser();
+                            // $find = array_values(array_filter($finduser, function($val) use($assist){ return $val['userid'] == $assist[1];}));
+                            // $fails[]=$device->nick_name." no existe el id ".$assist[1]." con el nombre ".$find[0]['name']." favor de revisar ";
+                        }
+
+                    }
+                    $insert = Assist::insert($report);
+                    // return $report;
+                    if($insert){
+                        $goals[] = $device->nick_name." se insertaron ".count($report)." registros";
+                    }
+                }else{
+                    $goals[] = $device->nick_name." No hay registros";
+                }
+            }
+            $zk->disconnect();
+            $res = ["goals"=>$goals, "fails"=>$fails];
+            return response()->json($res, 200);
+        }else{
+            return response()->json('Sin Conexion',200);
+        }
+    }
+
+    public function changeDateStore($sid,$d){
+        $device = AssistDevice::find($d);
+        // return $device;
+        $zk = new ZKTeco($device->ip);
+        if($zk->connect()){
+            $date= date('Y-m-d H:i:s');
+            $zk->setTime($date);
+            $zk->disconnect();
+            $res = [
+                "change"=>true,
+                "date"=>$date,
+            ];
+            return response()->json($res,200);
+        }else{
+            $res = [
+                "change"=>false,
+                "date"=>'Sin Conexion',
+            ];
+            return response()->json($res,401);
+        }
     }
 
 }

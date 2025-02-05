@@ -134,13 +134,19 @@ Route::middleware('kraken')->group(function(){
             Route::prefix('rrhh')->controller(AssistController::class)->group(function(){
                 Route::get('/justifications', 'Index');
                 Route::get('/form', 'form');
+                Route::get('index','index');
                 Route::get('/getTurnsWeek', 'getTurnsWeek');
+                Route::get('getReportWeek','getReportWeek');
+                Route::get('/pingStore/{d}','pingStore')->where(['d' => '[0-9]+']);;
                 Route::post('/addTurnsWeek', 'addTurnsWeek');
                 Route::post('/addFile', 'addFile');
                 Route::post('/addForm', 'addForm');
+                Route::post('getRegisDevice/{d}','getRegisDeviceStore');
+                Route::post('changeDate/{d}','changeDateStore');
             });
             Route::prefix('users')->controller(UsersController::class)->group(function(){
                 Route::get('/getUserForStore', 'getUserForStore');
+                Route::get('changePass/{uid}','RessetPass');
             });
             Route::prefix('resp/form')->controller(IndicatorController::class)->group(function(){
                 Route::get('/{form}','getFormResp');
