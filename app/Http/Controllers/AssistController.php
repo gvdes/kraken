@@ -537,11 +537,13 @@ class AssistController extends Controller
                             if($insert){
                                 $goals = $device->nick_name." se insertaron ".count($report)." registros";
                             }else{
-                                $fails = $device->nick_name." se insertaron ".count($report)." registros";
+                                $fails = $device->nick_name."no se insertaron ".count($report)." registros";
                             }
                         }else{
                             $goals = $device->nick_name." No hay registros";
                         }
+                    }else{
+                        $goals = $device->nick_name."No hay resgistros";
                     }
                     $termino = microtime(true);
                     $zk->disconnect();
