@@ -19,12 +19,12 @@ class Kernel extends ConsoleKernel
         $schedule->call(function () {
             $controller = new AssistController();
             $controller->ReplyAssistAut();
-        })->everyTenMinutes()->between('09:00', '10:30')->name("Replicacion de asistencia cada 5 min");//Respaldo solo de el ejercico actual
+        })->everyTenMinutes()->between('09:00', '11:00')->name("Replicacion de asistencia cada 5 min");//Respaldo solo de el ejercico actual
 
         $schedule->call(function () {
             $controller = new AssistController();
             $controller->ReplyAssistAut();
-        })->everyTwoHours($minutes = 0)->between('10:30', '20:30')->name("Replicacion de asistencia cada 2 horas");//Respaldo solo de el ejercico actual
+        })->everyTwoHours($minutes = 0)->between('11:30', '20:30')->name("Replicacion de asistencia cada 2 horas");//Respaldo solo de el ejercico actual
     }
 
     /**
