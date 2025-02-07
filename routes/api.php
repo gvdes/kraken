@@ -226,13 +226,17 @@ Route::middleware('kraken')->group(function(){
         Route::prefix('Indicators')->middleware('UseIndicator')->controller(IndicatorController::class)->group(function(){
             Route::get('index','index');
             Route::get('getForms','getForms');
+            Route::get('getClass','getClass');
+            Route::get('getClassStore','getClassStore');
+            Route::get('getUserClass','getUserClass');
             Route::get('/{form}', 'getForm');
             Route::post('addForm','addForm');
             Route::post('changeStatus','changeStatus');
             Route::post('addQuestion','addQuestion');
             Route::post('editQuest','editQuest');
             Route::post('deleteQuest','deleteQuest');
-
+            Route::post('editClass','editClass');
+            Route::post('editClassStore','editClassStore');
         });
         Route::prefix('Indicators')->controller(IndicatorController::class)->group(function(){
             Route::get('getForms','getForms');

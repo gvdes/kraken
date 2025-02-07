@@ -14,6 +14,7 @@ use App\Models\Assist;
 use App\Models\Turn;
 use App\Models\Proceeding;
 use App\Models\ViewReportWeek;
+use App\Models\ConfigWapi;
 use Rats\Zkteco\Lib\ZKTeco;
 use Illuminate\Support\Facades\DB;
 
@@ -570,8 +571,9 @@ class AssistController extends Controller
     }
 
     public function msg($message){
-        $token = env('MSG_TKN');
-        $instance = env('MSG_INS');
+        $wapi = ConfigWapi::find(1);
+        $token = $wapi->token;
+        $instance = $wapi->id_instance;
         $params=array(
             'token' => $token ,
             'to' => '5573461022',

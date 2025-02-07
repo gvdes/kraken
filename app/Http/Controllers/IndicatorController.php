@@ -11,6 +11,9 @@ use App\Models\QuestionType;
 use App\Models\QuestionOption;
 use App\Models\QuestionResponse;
 use App\Models\FormResponse;
+use App\Models\Classification;
+use App\Models\StoreClassification;
+use App\Models\UserClassification;
 use App\Models\User;
 use App\Models\Store;
 
@@ -353,5 +356,61 @@ class IndicatorController extends Controller
         $form->load(['type','responsible','user','question.type','question.options']);
         return response()->json($form,200);
 
+    }
+
+    public function getClass(){
+        $classification = Classification::all();
+        return response()->json($classification,200);
+    }
+
+    public function editClass(Request $request){
+        $id = $request->id;
+        $classification = Classification::find($id);
+        $classification->percentage = $request->percentage;
+        $classification->save();
+        $classification->fresh();
+        return response()->json($classification,200);
+    }
+
+    public function getClassStore(){
+        $store = Store::with('classification')->get();
+        return response()->json($store,200);
+    }
+
+    public function editClassStore(Request $request){
+        $id = isset($request->classification['id']);
+        if($id){
+            $class = StoreClassification::find($request->classification['id']);
+            $class->name = $request->classification['name'];
+            $class->import = $request->classification['import'];
+            $class->save();
+            $classStore = Store::with('classification')->where('id', $request->id)->first();
+            return response()->json($classStore,200);
+        }else{
+            $store = new StoreClassification;
+            $store->name = $request->classification['name'];
+            $store->_store = $request->id;
+            $store->import = $request->classification['import'];
+            $ins = $store->save();
+            if($ins){
+                $classStore = Store::with('classification')->where('id', $request->id)->first();
+                return response()->json($classStore,200);
+            }else{ return response()->json('Hubo un problema al hacer el registro',500);}
+        }
+    }
+
+    public function getUserClass(){
+        $user = User::with(['classification.store.store','classification.classification','rol.area'])->get();
+        $clasisfications = Classification::all();
+        // $storesClass = Store::with('classification')->get();
+        $storesClass = StoreClassification::with('store')->get();
+
+        $res = [
+            "users"=>$user,
+            "classifications"=>$clasisfications,
+            "stores"=>$storesClass
+        ];
+
+        return response()->json($res,200);
     }
 }

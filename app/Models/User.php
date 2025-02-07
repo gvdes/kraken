@@ -30,4 +30,6 @@ class User extends Model
     public function apps(){ return $this->hasMany('App\Models\UserApps','_user'); }
 
     public function turns(){ return $this->hasMany('App\Models\Turn','_user');}
+
+    public function classification(){ return $this->hasOne('App\Models\UserClassification','_user');}
 }
