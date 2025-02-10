@@ -16,6 +16,7 @@ use App\Models\StoreClassification;
 use App\Models\UserClassification;
 use App\Models\User;
 use App\Models\Store;
+use App\Models\Bonuses;
 
 class IndicatorController extends Controller
 {
@@ -373,7 +374,7 @@ class IndicatorController extends Controller
     }
 
     public function getClassStore(){
-        $store = Store::with('classification')->get();
+        $store = Store::with('classification.bonuses')->get();
         return response()->json($store,200);
     }
 
@@ -382,28 +383,25 @@ class IndicatorController extends Controller
         if($id){
             $class = StoreClassification::find($request->classification['id']);
             $class->name = $request->classification['name'];
-            $class->import = $request->classification['import'];
             $class->save();
-            $classStore = Store::with('classification')->where('id', $request->id)->first();
+            $bonos = $request->classification['bonuses'];
+            foreach($bonos as $bono){
+                $bonuses = Bonuses::where([['_store_classification',$bono['_store_classification']],['_hierarchy',$bono['_hierarchy']]])->update(['import'=>$bono['import']]);
+            }
+            $classStore = Store::with('classification.bonuses')->where('id', $request->id)->first();
             return response()->json($classStore,200);
-        }else{
-            $store = new StoreClassification;
-            $store->name = $request->classification['name'];
-            $store->_store = $request->id;
-            $store->import = $request->classification['import'];
-            $ins = $store->save();
-            if($ins){
-                $classStore = Store::with('classification')->where('id', $request->id)->first();
-                return response()->json($classStore,200);
-            }else{ return response()->json('Hubo un problema al hacer el registro',500);}
         }
     }
 
     public function getUserClass(){
-        $user = User::with(['classification.store.store','classification.classification','rol.area'])->get();
+        $user = User::with(['classification.store.store','classification.store.bonuses','classification.classification','rol.area'])
+        // ->whereHas('rol', function($q) { $q->where('type_rol', 2)->whereIn('hierarchy',[2,3,4])->whereIn('_area',[2,3]);})
+        ->whereHas('rol', function($q) { $q->where('type_rol', 2)->whereIn('hierarchy',[2,3,4]);})
+
+        ->where('_state','!=',4)->get();
         $clasisfications = Classification::all();
         // $storesClass = Store::with('classification')->get();
-        $storesClass = StoreClassification::with('store')->get();
+        $storesClass = StoreClassification::with(['store','bonuses'])->get();
 
         $res = [
             "users"=>$user,
@@ -412,5 +410,13 @@ class IndicatorController extends Controller
         ];
 
         return response()->json($res,200);
+    }
+
+    public function editUserClass(Request $request){
+        $user = $request->id;
+        $classification = $request->classification;
+        $class = UserClassification::where('_user',$user)->update(['_classification'=> $classification['classification']['id'], '_store_classification'=>  $classification['store']['id']]);
+        $user = User::with(['classification.store.store','classification.classification','rol.area'])->where('id',$user)->first();
+        return response()->json($user,200);
     }
 }

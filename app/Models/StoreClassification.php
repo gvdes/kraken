@@ -11,4 +11,6 @@ class StoreClassification extends Model
     public $timestamps = false;
 
     public function store(){ return $this->hasOne('App\Models\Store','id', '_store');}
+    public function bonuses(){ return $this->hasMany('App\Models\Bonuses','_store_classification', 'id');}
+
 }
