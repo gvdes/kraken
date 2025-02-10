@@ -17,12 +17,14 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->call(function () {
+            \Log::info('Tarea finalizada. s');
             $controller = new AssistController();
             $controller->ReplyAssistAut();
+            \Log::info('Tarea finalizada. s');
         })
         ->everyFiveMinutes()
         // ->everyMinute()
-        ->between('09:00', '11:00')
+        ->between('09:00', '11:30')
         ->name("Replicacion de asistencia cada 5 min");
 
         $schedule->call(function () {
