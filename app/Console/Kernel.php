@@ -20,8 +20,8 @@ class Kernel extends ConsoleKernel
             $controller = new AssistController();
             $controller->ReplyAssistAut();
         })
-        // ->everyFiveMinutes()
-        ->everyMinute()
+        ->everyFiveMinutes()
+        // ->everyMinute()
         ->between('09:00', '11:00')
         ->name("Replicacion de asistencia cada 5 min");
 
