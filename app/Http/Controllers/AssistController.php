@@ -563,6 +563,7 @@ class AssistController extends Controller
                 }
                 $goals=[];
                 $fails=[];
+                $report=[];
             }
 
         }else{
@@ -576,7 +577,7 @@ class AssistController extends Controller
         $instance = $wapi->id_instance;
         $params=array(
             'token' => $token ,
-            'to' => '5573461022',
+            'to' => '5539297483',
             'body' => $message
             );
             $curl = curl_init();
