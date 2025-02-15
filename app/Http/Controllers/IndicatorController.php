@@ -507,6 +507,12 @@ class IndicatorController extends Controller
             $pregunta['files']= $filesWithUrls;
             }
         }
-        return response()->json($response,200);
+        $users = User::all();
+        $res = [
+            "responses"=>$response,
+            "usuarios"=>$users
+        ];
+
+        return response()->json($res,200);
     }
 }
