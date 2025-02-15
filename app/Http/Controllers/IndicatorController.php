@@ -479,7 +479,9 @@ class IndicatorController extends Controller
 
     }
 
-    public function getformResponses(){
+    public function getformResponses(Request $request){
+        $to =  $request->to;
+        $from =  $request->from;
         $forms = Form::all();
         // $response  = FormResponse::with('store','user','form')->get();
         $response  = FormResponse::with('store','user','form')
@@ -490,6 +492,8 @@ class IndicatorController extends Controller
                 })
                 ->select(DB::raw('COALESCE(SUM(form_questions._points), 0)'));
         }])
+        ->whereDate('created_at','>=',$from)
+        ->whereDate('created_at','<=',$to)
         ->get();
         $stores =  Store::all();
         $res = [
