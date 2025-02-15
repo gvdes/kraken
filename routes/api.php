@@ -229,7 +229,9 @@ Route::middleware('kraken')->group(function(){
             Route::get('getClass','getClass');
             Route::get('getClassStore','getClassStore');
             Route::get('getUserClass','getUserClass');
+            Route::get('getformResponses','getformResponses');
             Route::get('/{form}', 'getForm');
+            Route::get('/{id}/viewResponseForm','viewResponseForm');
             Route::post('addForm','addForm');
             Route::post('changeStatus','changeStatus');
             Route::post('addQuestion','addQuestion');
@@ -238,6 +240,8 @@ Route::middleware('kraken')->group(function(){
             Route::post('editClass','editClass');
             Route::post('editClassStore','editClassStore');
             Route::post('editUserClass','editUserClass');
+            Route::post('editUserStore','editUserStore');
+            Route::post('changeUserBonues','changeUserBonues');
         });
         Route::prefix('Indicators')->controller(IndicatorController::class)->group(function(){
             Route::get('getForms','getForms');

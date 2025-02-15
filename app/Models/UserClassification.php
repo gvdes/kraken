@@ -9,6 +9,8 @@ class UserClassification extends Model
 {
     protected $table = 'user_classifications';
     public $timestamps = false;
+    protected $primaryKey = null;
+
 
     public function store(){ return $this->hasOne('App\Models\StoreClassification','id', '_store_classification');}
     public function classification(){ return $this->hasOne('App\Models\Classification','id', '_classification');}

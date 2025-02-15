@@ -13,5 +13,7 @@ class Form extends Model
     public function responsible(){return $this->belongsTo('\App\Models\FormResponsible','_responsible','id'); }
     public function user(){return $this->belongsTo('\App\Models\FormResponsible','_created_by','id'); }
     public function question(){return $this->hasMany('\App\Models\FormQuestion','_form','id'); }
+    public function response(){return $this->hasMany('\App\Models\FormResponse','_form','id'); }
+
 
 }

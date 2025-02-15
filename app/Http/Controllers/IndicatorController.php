@@ -13,10 +13,11 @@ use App\Models\QuestionResponse;
 use App\Models\FormResponse;
 use App\Models\Classification;
 use App\Models\StoreClassification;
+use App\Models\ClassificationStore;
 use App\Models\UserClassification;
 use App\Models\User;
 use App\Models\Store;
-use App\Models\Bonuses;
+use App\Models\Fecha;
 
 class IndicatorController extends Controller
 {
@@ -374,49 +375,123 @@ class IndicatorController extends Controller
     }
 
     public function getClassStore(){
-        $store = Store::with('classification.bonuses')->get();
-        return response()->json($store,200);
+        $store = Store::with('classification.clasification.bonuses')
+        ->wherehas('classification')
+        ->get();
+        $storeClass = ClassificationStore::with('bonuses')->get();
+
+        $res = [
+            "classifications"=>$storeClass,
+            "stores"=>$store
+        ];
+
+        return response()->json($res,200);
     }
 
-    public function editClassStore(Request $request){
-        $id = isset($request->classification['id']);
-        if($id){
-            $class = StoreClassification::find($request->classification['id']);
-            $class->name = $request->classification['name'];
+    public function editClassStore(Request $request){//edicion de clasificacion de la sucursal
+            $class = StoreClassification::find($request->id);
+            $class->_classification_store = $request->clasification['id'];
             $class->save();
-            $bonos = $request->classification['bonuses'];
-            foreach($bonos as $bono){
-                $bonuses = Bonuses::where([['_store_classification',$bono['_store_classification']],['_hierarchy',$bono['_hierarchy']]])->update(['import'=>$bono['import']]);
+            $res = $class->fresh();
+            if($res){
+                // return $class;
+                $users = User::with(['classification.store.store','classification.store.clasification.bonuses','classification.classification','rol.area'])
+                ->whereHas('rol', function($q) { $q->where('type_rol', 2)->whereIn('hierarchy',[2,3,4])->whereIn('_area',[2,3]);})
+                // ->whereHas('rol', function($q) { $q->where('type_rol', 2)->whereIn('hierarchy',[2,3,4]);}) // para pruebas
+                ->whereHas('classification',  function($q) use($class) { $q->where('_store_classification', $class->id);})->get();
+
+                foreach($users as $user){
+                    $bonus = collect($user->classification->store->clasification->bonuses)->firstWhere('_hierarchy', $user->rol->hierarchy);
+                    if ($bonus) {
+                        $updBon = UserClassification::where('_user',$user->id)->update(['import'=>$bonus['import']]);
+                    }
+                }
+                $classStore = Store::with('classification.clasification.bonuses')->where('id', $request->id)->first();
+                return response()->json($classStore,200);
+            }else{
+                return response()->json('No se realizo la modificacion',500);
             }
-            $classStore = Store::with('classification.bonuses')->where('id', $request->id)->first();
-            return response()->json($classStore,200);
-        }
+
     }
 
     public function getUserClass(){
-        $user = User::with(['classification.store.store','classification.store.bonuses','classification.classification','rol.area'])
-        // ->whereHas('rol', function($q) { $q->where('type_rol', 2)->whereIn('hierarchy',[2,3,4])->whereIn('_area',[2,3]);})
-        ->whereHas('rol', function($q) { $q->where('type_rol', 2)->whereIn('hierarchy',[2,3,4]);})
-
+        $user = User::with(['classification.store.store','classification.store.clasification.bonuses','classification.classification','rol.area'])
+        ->whereHas('rol', function($q) { $q->where('type_rol', 2)->whereIn('hierarchy',[2,3,4])->whereIn('_area',[2,3]);})
+        // ->whereHas('rol', function($q) { $q->where('type_rol', 2)->whereIn('hierarchy',[2,3,4]);}) // para pruebas
+        ->whereHas('classification')
         ->where('_state','!=',4)->get();
         $clasisfications = Classification::all();
         // $storesClass = Store::with('classification')->get();
-        $storesClass = StoreClassification::with(['store','bonuses'])->get();
-
+        $storesClass = StoreClassification::with(['store','clasification'])->get();
+        $weekAct = Fecha::selectRaw('WEEK((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY), 7) as week,fecha')
+        ->whereRaw('WEEK((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY), 7) = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7) AND YEAR((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY)) = YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))')
+        ->orderBy('fecha', 'asc')
+        ->get();
         $res = [
             "users"=>$user,
             "classifications"=>$clasisfications,
-            "stores"=>$storesClass
+            "stores"=>$storesClass,
+            "week"=>$weekAct
         ];
 
         return response()->json($res,200);
     }
 
     public function editUserClass(Request $request){
-        $user = $request->id;
+        $user = $request->_user;
         $classification = $request->classification;
-        $class = UserClassification::where('_user',$user)->update(['_classification'=> $classification['classification']['id'], '_store_classification'=>  $classification['store']['id']]);
+        $class = UserClassification::where('_user',$user)->update(['_classification'=> $classification['id']]);
         $user = User::with(['classification.store.store','classification.classification','rol.area'])->where('id',$user)->first();
         return response()->json($user,200);
+    }
+
+    public function editUserStore(Request $request){
+        $id = $request->_user;
+        $changeBonus = $request->chBonus;
+        $store = $request->store;
+        if($changeBonus == 1){
+            $users = User::with(['classification.store.store','classification.store.clasification.bonuses','classification.classification','rol.area'])
+            ->where('id',$id)
+            ->first();
+            $bonus = collect($users->classification->store->clasification->bonuses)->firstWhere('_hierarchy', $users->rol->hierarchy);
+            if ($bonus) {
+                $updBon = UserClassification::where('_user',$id)->update(['import'=>$bonus['import'],'_store_classification'=> $store['id']]);
+            }
+        }else{
+        $class = UserClassification::where('_user',$id)->update(['_store_classification'=> $store['id']]);
+        }
+
+        $user = User::with(['classification.store.store','classification.classification','rol.area'])->where('id',$id)->first();
+        return response()->json($user,200);
+    }
+
+    public function changeUserBonues(Request $request){
+        $user = $request->_user;
+        $import = $request->import;
+
+        $changeValue = UserClassification::where('_user',$user)->update(['import'=>$import]);
+        if($changeValue){
+            return response()->json('Cambio de importe Realizado',200);
+        }else{
+            return response()->json('El monto es el mismo no se realizo cambio',200);
+        }
+
+    }
+
+    public function getformResponses(){
+        $forms = Form::all();
+        $response  = FormResponse::with('store','user','form')->get();
+        $stores =  Store::all();
+        $res = [
+            "form"=>$forms,
+            "responses"=>$response,
+            "stores"=>$stores
+        ];
+        return response()->json($res,200);
+    }
+
+    public function viewResponseForm($id){
+        $response  = FormResponse::with('responses.question','store','user','form')->where('id',$id)->first();
+        return response()->json($response,200);
     }
 }
