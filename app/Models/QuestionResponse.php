@@ -11,7 +11,7 @@ class QuestionResponse extends Model
     public $timestamps = false;
 
     public function question(){return $this->hasOne('\App\Models\FormQuestion','id','_question'); }
-    // public function selectedOption() {
-    //     return $this->belongsTo('\App\Models\QuestionOption', '_option'); //quitar si hay problema
-    // }
+    public function selectedOption() {
+        return $this->belongsTo('\App\Models\QuestionOption', '_option'); //quitar si hay problema
+    }
 }

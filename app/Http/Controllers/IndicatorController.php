@@ -18,6 +18,7 @@ use App\Models\UserClassification;
 use App\Models\User;
 use App\Models\Store;
 use App\Models\Fecha;
+use Illuminate\Support\Facades\DB;
 
 class IndicatorController extends Controller
 {
@@ -480,12 +481,16 @@ class IndicatorController extends Controller
 
     public function getformResponses(){
         $forms = Form::all();
-        $response  = FormResponse::with('store','user','form')->get();
-        // $response  = FormResponse::with('store','user','form')->withCount(['responses as total_score' => function ($query) {
-        //     $query->whereHas('selectedOption', function ($q) {
-        //         $q->where('_correct', 1); // Solo opciones correctas
-        //     })->with('question')->select(DB::raw('SUM(questions._points)'));
-        // }])->get();//poner el normal jejetl
+        // $response  = FormResponse::with('store','user','form')->get();
+        $response  = FormResponse::with('store','user','form')
+        ->withCount(['responses as total_score' => function ($query) {
+            $query->leftJoin('form_questions', 'question_responses._question', '=', 'form_questions.id')
+                ->whereHas('selectedOption', function ($q) {
+                    $q->where('_correct', 1);
+                })
+                ->select(DB::raw('COALESCE(SUM(form_questions._points), 0)'));
+        }])
+        ->get();
         $stores =  Store::all();
         $res = [
             "form"=>$forms,
