@@ -480,7 +480,12 @@ class IndicatorController extends Controller
 
     public function getformResponses(){
         $forms = Form::all();
-        $response  = FormResponse::with('store','user','form')->get();
+        // $response  = FormResponse::with('store','user','form')->get();
+        $response  = FormResponse::with('store','user','form')->withCount(['responses as total_score' => function ($query) {
+            $query->whereHas('selectedOption', function ($q) {
+                $q->where('_correct', 1); // Solo opciones correctas
+            })->with('question')->select(DB::raw('SUM(questions._points)'));
+        }])->get();//poner el normal jejetl
         $stores =  Store::all();
         $res = [
             "form"=>$forms,
