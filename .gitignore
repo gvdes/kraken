@@ -3,6 +3,7 @@
 /public/hot
 /public/storage
 /public/multimedia/profiles
+/public/multimedia/forms
 /storage/*.key
 /vendor
 .env

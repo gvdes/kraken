@@ -491,7 +491,22 @@ class IndicatorController extends Controller
     }
 
     public function viewResponseForm($id){
-        $response  = FormResponse::with('responses.question','store','user','form')->where('id',$id)->first();
+        $response  = FormResponse::with('responses.question.options','store','user','form')->where('id',$id)->first();
+        $preguntas =  $response->responses;
+        foreach($preguntas as $pregunta){
+            $folderName = $pregunta['question']['_type'] == 3 ? $pregunta['text'] : false ;
+            if($folderName){
+                $folderPath = public_path("multimedia/forms/{$folderName}");
+                if (!file_exists($folderPath) || !is_dir($folderPath)) {
+                    $pregunta['files'] = [];
+                }
+                $files = array_values(array_diff(scandir($folderPath), ['.', '..'])); // Excluye `.` y `..`
+                $filesWithUrls = array_map(function ($file) use ( $folderName) {
+                    return  "forms/{$folderName}/{$file}";
+                }, $files);
+            $pregunta['files']= $filesWithUrls;
+            }
+        }
         return response()->json($response,200);
     }
 }
