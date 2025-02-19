@@ -521,7 +521,7 @@ class IndicatorController extends Controller
             $pregunta['files']= $filesWithUrls;
             }
         }
-        $users = User::all();
+        $users = User::with('rol.area')->where('_state','!=',4)->get();
         $res = [
             "responses"=>$response,
             "usuarios"=>$users
