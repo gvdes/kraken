@@ -484,7 +484,7 @@ class IndicatorController extends Controller
         $from =  $request->from;
         $forms = Form::all();
         // $response  = FormResponse::with('store','user','form')->get();
-        $response  = FormResponse::with('store','user','form')
+        $response  = FormResponse::with('store','user.rol.area','form')
         ->withCount(['responses as total_score' => function ($query) {
             $query->leftJoin('form_questions', 'question_responses._question', '=', 'form_questions.id')
                 ->whereHas('selectedOption', function ($q) {
