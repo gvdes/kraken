@@ -180,7 +180,8 @@ class AssistController extends Controller
     }
 
     public function getJustifications(){
-        $justifications = AssistJustification::with('user','paymen','type','state')->where('evidence','!=','')->get();
+        $justifications = AssistJustification::with('user','paymen','type','state')->where('evidence','!=','')->whereRaw('WEEK(( created_at - INTERVAL (DAYOFWEEK(created_at) % 7) DAY), 7) = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)')
+        ->whereRaw('YEAR(created_at) = YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))')->get();
 
         foreach($justifications as $justification){
             $userId = $justification['_user'];
