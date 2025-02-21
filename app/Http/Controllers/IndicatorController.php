@@ -450,18 +450,16 @@ class IndicatorController extends Controller
         $id = $request->_user;
         $changeBonus = $request->chBonus;
         $store = $request->store;
+        $class = UserClassification::where('_user',$id)->update(['_store_classification'=> $store['id']]);
         if($changeBonus){
             $users = User::with(['classification.store.store','classification.store.clasification.bonuses','classification.classification','rol.area'])
             ->where('id',$id)
             ->first();
             $bonus = collect($users->classification->store->clasification->bonuses)->firstWhere('_hierarchy', $users->rol->hierarchy);
             if ($bonus) {
-                $updBon = UserClassification::where('_user',$id)->update(['import'=>$bonus['import'],'_store_classification'=> $store['id']]);
+                $updBon = UserClassification::where('_user',$id)->update(['import'=>$bonus['import']]);
             }
-        }else{
-        $class = UserClassification::where('_user',$id)->update(['_store_classification'=> $store['id']]);
         }
-
         $user = User::with(['classification.store.store','classification.store.clasification.bonuses','classification.classification','rol.area'])->where('id',$id)->first();
         return response()->json($user,200);
     }
