@@ -462,7 +462,7 @@ class IndicatorController extends Controller
         $class = UserClassification::where('_user',$id)->update(['_store_classification'=> $store['id']]);
         }
 
-        $user = User::with(['classification.store.store','classification.classification','rol.area'])->where('id',$id)->first();
+        $user = User::with(['classification.store.store','classification.store.clasification.bonuses','classification.classification','rol.area'])->where('id',$id)->first();
         return response()->json($user,200);
     }
 
