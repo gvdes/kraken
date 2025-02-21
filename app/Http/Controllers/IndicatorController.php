@@ -450,7 +450,7 @@ class IndicatorController extends Controller
         $id = $request->_user;
         $changeBonus = $request->chBonus;
         $store = $request->store;
-        if($changeBonus == 1){
+        if($changeBonus){
             $users = User::with(['classification.store.store','classification.store.clasification.bonuses','classification.classification','rol.area'])
             ->where('id',$id)
             ->first();
