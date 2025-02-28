@@ -224,7 +224,6 @@ class IndicatorController extends Controller
         if (!$users) {
             return response()->json("No hay ningún usuario", 404);
         }
-
         // Verificar si el formulario ya fue respondido
         $responses = [];
         if ($getform->_type == 1) {
@@ -247,7 +246,7 @@ class IndicatorController extends Controller
         $userHierarchy = $userForm->rol['hierarchy'];
         $userTypeRol = $userForm->rol['type_rol'];
 
-        if (in_array($userHierarchy, [1, 2 , 3])) {
+        if (in_array($userHierarchy, [1, 2 , 3,4])) {// modificar para que solo muestre por rol
             // Jerarquía 1 o 2
             if ($userTypeRol == 2) {
                 // Tipo de rol 2
