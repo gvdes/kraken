@@ -300,19 +300,20 @@ class UsersController extends Controller
             }
             //permissions
 
-            $useper = new UserModules;
             $delete = UserModules::where('_user',$request->id)->delete();
             $permissions = UserRol::with('permissions')->where('id',$request->rol['id'])->first();
-            $permi = $permissions['permissions'];
-            foreach($permi as $pre){
-                $inserper[] = [
-                    "_user"=>$request->id,
-                    "_permission"=>$pre['_permission'],
-                    "_module"=>$pre['_module']
-                ];
+            $permi = $permissions->permissions;
+
+            if ($permi->count() > 0) {
+                $inserper = $permi->map(function ($pre) use ($request) {
+                    return [
+                        "_user" => $request->id,
+                        "_permission" => $pre->_permission,
+                        "_module" => $pre->_module
+                    ];
+                })->toArray();
+                $insertpermi = UserModules::insert($inserper);
             }
-
-
             $inslog = new UserLog();
             $inslog->_user = $account;
             $inslog->_type_log = 3;
@@ -457,8 +458,9 @@ class UsersController extends Controller
         return $ins;
     }
 
-    public function RessetPass($uid){
-        $user =  User::find($uid); // Crear el usuario
+    public function RessetPass(...$args){
+        $id =  count($args) > 1 ? $args[1] : $args[0];
+        $user =  User::find($id);
         $user->password = Hash::make('12345');
         $user->change_password = 1;
         $user->_state = 5;
