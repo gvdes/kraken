@@ -14,4 +14,5 @@ class QuestionResponse extends Model
     public function selectedOption() {
         return $this->belongsTo('\App\Models\QuestionOption', '_option'); //quitar si hay problema
     }
+    public function response(){return $this->hasOne('\App\Models\FormResponse','id','_response'); }
 }

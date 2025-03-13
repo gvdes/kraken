@@ -15,6 +15,7 @@ use App\Models\Classification;
 use App\Models\StoreClassification;
 use App\Models\ClassificationStore;
 use App\Models\UserClassification;
+use App\Models\ViewReportWeek;
 use App\Models\User;
 use App\Models\Store;
 use App\Models\Fecha;
@@ -96,6 +97,7 @@ class IndicatorController extends Controller
         $question->_required = $request->_required;
         $question->_type = $request->type['id'];
         $question->_points = isset($request->_points) ? $request->_points : null;
+        $question->_retained = isset($request->_retained) ? $request->_retained : null;
         $question->_breach =  isset($request->_breach) ? $request->_breach : 0;
         $question->save();
         $options = $request->options;
@@ -414,28 +416,53 @@ class IndicatorController extends Controller
 
     }
 
-    public function getUserClass(){
-        $user = User::with(['classification.store.store','classification.store.clasification.bonuses','classification.classification','rol.area'])
-        ->whereHas('rol', function($q) { $q->where('type_rol', 2)->whereIn('hierarchy',[2,3,4])->whereIn('_area',[2,3]);})
-        // ->whereHas('rol', function($q) { $q->where('type_rol', 2)->whereIn('hierarchy',[2,3,4]);}) // para pruebas
-        ->whereHas('classification')
-        ->where('_state','!=',4)->get();
+    public function getUserClass() {
+        // Optimizar la carga de datos de los usuarios
+        $user = User::with([
+                'classification.store.store',
+                'classification.store.clasification.bonuses',
+                'classification.classification',
+                'rol.area'
+            ])
+            ->whereHas('rol', function($q) {
+                $q->where('type_rol', 2)
+                  ->whereIn('hierarchy', [2, 3, 4])
+                  ->whereIn('_area', [2, 3]);
+            })
+            ->whereHas('classification')
+            ->where('_state', '!=', 4)
+            ->get();
+
+        // Realizar el cálculo de la clase de usuario en un solo paso (sin foreach)
+        $user = $user->map(function($usr) {
+            // Llamar a getCalculateClassUser aquí
+            $usr['class'] = $this->getCalculateClassUser($usr);
+            return $usr;
+        });
+
+        // Obtener todas las clasificaciones en un solo paso (sin foreach)
         $clasisfications = Classification::all();
-        // $storesClass = Store::with('classification')->get();
-        $storesClass = StoreClassification::with(['store','clasification'])->get();
-        $weekAct = Fecha::selectRaw('WEEK((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY), 7) as week,fecha')
-        ->whereRaw('WEEK((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY), 7) = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7) AND YEAR((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY)) = YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))')
-        ->orderBy('fecha', 'asc')
-        ->get();
+
+        // Obtener las tiendas con sus clasificaciones en un solo paso
+        $storesClass = StoreClassification::with(['store', 'clasification'])->get();
+
+        // Obtener la semana actual
+        $weekAct = Fecha::selectRaw('WEEK((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY), 7) as week, fecha')
+            ->whereRaw('WEEK((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY), 7) = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)
+                        AND YEAR((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY)) = YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))')
+            ->orderBy('fecha', 'asc')
+            ->get();
+
         $res = [
-            "users"=>$user,
-            "classifications"=>$clasisfications,
-            "stores"=>$storesClass,
-            "week"=>$weekAct
+            "users" => $user,
+            "classifications" => $clasisfications,
+            "stores" => $storesClass,
+            "week" => $weekAct
         ];
 
-        return response()->json($res,200);
+        return response()->json($res, 200);
     }
+
 
     public function editUserClass(Request $request){
         $user = $request->_user;
@@ -526,4 +553,252 @@ class IndicatorController extends Controller
 
         return response()->json($res,200);
     }
+
+    public function calculateClassUser(){
+        // Obtener datos del reporte de asistencia
+        $report = ViewReportWeek::select(
+            'id',
+            DB::raw('SUM(faltas(LUNES) + faltas(MARTES) + faltas(MIERCOLES) + faltas(JUEVES) + faltas(VIERNES) + faltas(SABADO) + faltas(DOMINGO)) AS FALTAS'),
+            DB::raw('SUM(retardos(LUNES) + retardos(MARTES) + retardos(MIERCOLES) + retardos(JUEVES) + retardos(VIERNES) + retardos(SABADO) + retardos(DOMINGO)) AS RETARDOS'),
+        )->groupBy('id')->get()->keyBy('id');
+
+        // Condición para filtrar respuestas de la semana actual
+        $weekCondition = 'WEEK((created_at - INTERVAL (DAYOFWEEK(created_at) % 7) DAY), 7) = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)
+            AND YEAR((created_at - INTERVAL (DAYOFWEEK(created_at) % 7) DAY)) = YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))';
+
+        // Obtener respuestas incorrectas de usuarios calificables
+        $responses = QuestionResponse::with([
+            'selectedOption',
+            'question',
+            'response' => function ($q) use ($weekCondition) {
+                $q->whereRaw($weekCondition)
+                    ->whereHas('form', function ($q) {
+                        $q->where('_qualified', 1);
+                    });
+            },
+            'response.form'
+        ])
+        ->whereHas('selectedOption', function ($q) {
+            $q->where('_correct', 0);
+        })
+        ->whereHas('response', function ($q) use ($weekCondition) {
+            $q->whereRaw($weekCondition)
+                ->whereHas('form', function ($q) {
+                    $q->where('_qualified', 1);
+                });
+        })
+        ->get();
+
+        $userResponses = [];
+
+        // Procesar respuestas para cada usuario
+        foreach ($responses as $response) {
+            $conditions = json_decode(json_decode($response['condition']));
+            if ($conditions) {
+                $users = [];
+                $quali = "";
+                $observacion = "No hay observación";
+
+                foreach ($conditions as $condition) {
+                    if (!isset($condition->response)) continue;
+                    if (is_string($condition->response)) {
+                        $observacion = $condition->response;
+                        continue;
+                    }
+                    if (is_array($condition->response)) {
+                        foreach ($condition->response as $qualified) {
+                            if (is_object($qualified) && isset($qualified->col)) {
+                                $users[] = $qualified->col;
+                                $quali = $qualified->qualified;
+                            } elseif (is_numeric($qualified)) {
+                                $users[] = $qualified;
+                            }
+                        }
+                    }
+                }
+
+                foreach ($users as $userId) {
+                    if (!isset($userResponses[$userId])) {
+                        $userResponses[$userId] = [];
+                    }
+                    $userResponses[$userId][] = [
+                        "response"=> $response['id'],
+                        "form" => $response['response']['form']['name'] ?? "N/A",
+                        "question" => $response['question']['question'] ?? "N/A",
+                        "_retained" => $response['question']['_retained'] ?? 0,
+                        "text" => $response['text'] ?? "",
+                        "qualified" => $quali,
+                        "fecha_hora" => $response['response']['created_at']->format('Y-m-d H:i:s') ?? "N/A",
+                        "observacion" => $observacion
+                    ];
+                }
+            }
+        }
+
+        // Obtener usuarios activos con roles específicos
+        $users = User::where('_state', '!=', 4)
+            ->whereHas('rol', function ($q) {
+                $q->where('type_rol', 2)
+                ->whereIn('hierarchy', [2, 3, 4])
+                ->whereIn('_area', [2, 3]);
+            })->get()->mapWithKeys(function ($user) {
+                return [$user->id => ["name" => $user->name . ' ' . $user->surnames, "id" => $user->id,"id_rc" =>  $user->RC_id]];
+            });
+
+        $res = [];
+
+        // Procesar usuarios para generar el reporte
+        foreach ($users as $userId => $userData) {
+            $responses = $userResponses[$userId] ?? [];
+            $totalRetained = array_sum(array_column($responses, '_retained')) ?? 0;
+
+
+
+            // Obtener datos de asistencia del usuario
+            $faltas = floatval($report[$userData['id_rc']]->FALTAS) ?? 0;
+            $retardos = floatval($report[$userData['id_rc']]->RETARDOS) ?? 0;
+            $asist = ($faltas * 100 + $retardos * 20);
+
+            $averageRetained = round((600 - ($totalRetained + $asist)) / 6);
+
+            // Calcular clasificación en base a respuestas y asistencia
+            $classification = match (true) {
+                $averageRetained >= 90 && $averageRetained <= 100 => 'A',
+                $averageRetained >= 80 && $averageRetained <= 89 => 'B',
+                $averageRetained >= 70 && $averageRetained <= 79 => 'C',
+                $averageRetained <= 69 => 'D',
+                default => 'A'
+            };
+
+            $res[] = [
+                "colaborador" => [
+                    "id" => $userData['id'],
+                    "nombre" => $userData['name'],
+                    "percentage" => $averageRetained,
+                    "classification" => $classification,
+                    "puntosAsistencia"=> $asist,
+                    "puntosChecklist" => $totalRetained
+                ],
+                "responses" => $responses
+            ];
+        }
+
+        return response()->json($res) ;
+    }
+
+    private function getCalculateClassUser($colab) {
+        $report = ViewReportWeek::select(
+            'id',
+            DB::raw('SUM(faltas(LUNES) + faltas(MARTES) + faltas(MIERCOLES) + faltas(JUEVES) + faltas(VIERNES) + faltas(SABADO) + faltas(DOMINGO)) AS FALTAS'),
+            DB::raw('SUM(retardos(LUNES) + retardos(MARTES) + retardos(MIERCOLES) + retardos(JUEVES) + retardos(VIERNES) + retardos(SABADO) + retardos(DOMINGO)) AS RETARDOS'),
+        )->where('id', $colab['RC_id'])->groupBy('id')->get()->keyBy('id');
+
+        $weekCondition = 'WEEK((created_at - INTERVAL (DAYOFWEEK(created_at) % 7) DAY), 7) = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)
+        AND YEAR((created_at - INTERVAL (DAYOFWEEK(created_at) % 7) DAY)) = YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))';
+
+        $responses = QuestionResponse::with([
+            'selectedOption',
+            'question',
+            'response' => function ($q) use ($weekCondition) {
+                $q->whereRaw($weekCondition)
+                    ->whereHas('form', function ($q) {
+                        $q->where('_qualified', 1);
+                    });
+            },
+            'response.form'
+        ])
+        ->whereHas('selectedOption', function ($q) {
+            $q->where('_correct', 0);
+        })
+        ->whereHas('response', function ($q) use ($weekCondition) {
+            $q->whereRaw($weekCondition)
+                ->whereHas('form', function ($q) {
+                    $q->where('_qualified', 1);
+                });
+        })
+        ->get();
+
+        $userResponses = [];
+
+        foreach ($responses as $response) {
+            $conditions = json_decode(json_decode($response['condition']));
+            if ($conditions) {
+                $users = [];
+                $quali = "";
+                $observacion = "No hay observación";
+
+                foreach ($conditions as $condition) {
+                    if (!isset($condition->response)) continue;
+                    if (is_string($condition->response)) {
+                        $observacion = $condition->response;
+                        continue;
+                    }
+                    if (is_array($condition->response)) {
+                        foreach ($condition->response as $qualified) {
+                            if (is_object($qualified) && isset($qualified->col)) {
+                                $users[] = $qualified->col;
+                                $quali = $qualified->qualified;
+                            } elseif (is_numeric($qualified)) {
+                                $users[] = $qualified;
+                            }
+                        }
+                    }
+                }
+
+                foreach ($users as $userId) {
+                    if (!isset($userResponses[$userId])) {
+                        $userResponses[$userId] = [];
+                    }
+                    $userResponses[$userId][] = [
+                        "response"=> $response['id'],
+                        "form" => $response['response']['form']['name'] ?? "N/A",
+                        "question" => $response['question']['question'] ?? "N/A",
+                        "_retained" => $response['question']['_retained'] ?? 0,
+                        "text" => $response['text'] ?? "",
+                        "qualified" => $quali,
+                        "fecha_hora" => $response['response']['created_at']->format('Y-m-d H:i:s') ?? "N/A",
+                        "observacion" => $observacion
+                    ];
+                }
+            }
+        }
+
+        $user = User::where('id', $colab['id'])->first();
+        if (!$user) {
+            return null; // Si no se encuentra el usuario, retorna null
+        }
+
+        $userData = [
+            "name" => $user->name . ' ' . $user->surnames,
+            "id" => $user->id,
+            "id_rc" => $user->RC_id
+        ];
+
+        $responses = $userResponses[$userData['id']] ?? [];
+        $totalRetained = array_sum(array_column($responses, '_retained')) ?? 0;
+        $faltas = floatval($report[$userData['id_rc']]->FALTAS ?? 0);
+        $retardos = floatval($report[$userData['id_rc']]->RETARDOS ?? 0);
+        $asist = ($faltas * 100 + $retardos * 20);
+
+        $averageRetained = round((600 - ($totalRetained + $asist)) / 6);
+
+        $classification = match (true) {
+            $averageRetained >= 90 && $averageRetained <= 100 => 'A',
+            $averageRetained >= 80 && $averageRetained <= 89 => 'B',
+            $averageRetained >= 70 && $averageRetained <= 79 => 'C',
+            $averageRetained <= 69 => 'D',
+            default => 'A'
+        };
+
+        $res = [
+            "percentage" => $averageRetained,
+            "classification" => $classification,
+            "puntosAsistencia"=> $asist,
+            "puntosChecklist" => $totalRetained,
+            "responses" => $responses
+        ];
+
+        return $res;
+    }
+
 }

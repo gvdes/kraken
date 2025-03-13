@@ -229,9 +229,11 @@ Route::middleware('kraken')->group(function(){
             Route::get('getClass','getClass');
             Route::get('getClassStore','getClassStore');
             Route::get('getUserClass','getUserClass');
+            Route::get('calculateClassUser','calculateClassUser');
             Route::get('/{form}', 'getForm');
             Route::get('/{id}/viewResponseForm','viewResponseForm');
             Route::post('addForm','addForm');
+            Route::post('changeQualified','changeQualified');
             Route::post('changeStatus','changeStatus');
             Route::post('addQuestion','addQuestion');
             Route::post('editQuest','editQuest');

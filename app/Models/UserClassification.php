@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class UserClassification extends Model
 {
     protected $table = 'user_classifications';
-    public $timestamps = false;
+    // public $timestamps = false;
     protected $primaryKey = null;
 
 
