@@ -141,9 +141,14 @@ class AssistController extends Controller
         $store = $request->route('sid');
         $staff = User::where('_store',$store)->get();
         $types = JustificationType::all();
+        // $RcIds = implode(',',$staff->pluck('id')->toArray());
+        $justifications = AssistJustification::with('user','paymen','type','state')->where('evidence','!=','')->whereIn('_user',$staff->pluck('id')->toArray())->whereRaw('WEEK(( created_at - INTERVAL (DAYOFWEEK(created_at) % 7) DAY), 7) = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)')
+        ->whereRaw('YEAR(created_at) = YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))')->get();
+
         $res = [
             'user'=>$staff,
-            'types'=>$types
+            'types'=>$types,
+            'justifications'=>$justifications
         ];
         return response()->json($res);
     }
@@ -403,6 +408,29 @@ class AssistController extends Controller
         ];
         return response()->json($res);
     }
+
+    public function deleteTurnUser(Request $request){
+        $goals = [
+            'eliminado'=>[],
+        ];
+        $hour_hand=$request->key;
+        $user = $request->user;
+
+        $exitTurn = Turn::where([['_user',$user],['hour_hand',$hour_hand]])->whereRaw('_week = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)')
+        ->whereRaw('_year = YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))')->first();
+        if($exitTurn){
+            $busTurn = Turn::where([['_user',$user],['hour_hand',$hour_hand]])
+                ->whereRaw('_week = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)')
+                ->whereRaw('_year = YEAR(CURDATE())')
+                ->delete();
+            if($busTurn){
+                $goals['eliminado']=['_user'=>$user,'hour_hand'=>$hour_hand];
+            }
+        }
+        return response()->json($goals,200);
+    }
+
+
     public function getRegisDeviceStore($sid,$d){
         $goals = [];
         $fails = [];

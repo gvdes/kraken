@@ -139,6 +139,7 @@ Route::middleware('kraken')->group(function(){
                 Route::get('getReportWeek','getReportWeek');
                 Route::get('/pingStore/{d}','pingStore')->where(['d' => '[0-9]+']);;
                 Route::post('/addTurnsWeek', 'addTurnsWeek');
+                Route::post('/deleteTurnUser', 'deleteTurnUser');
                 Route::post('/addFile', 'addFile');
                 Route::post('/addForm', 'addForm');
                 Route::post('getRegisDevice/{d}','getRegisDeviceStore');
