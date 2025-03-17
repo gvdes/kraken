@@ -12,6 +12,7 @@ use App\Models\PaymenPercentage;
 use App\Models\User;
 use App\Models\Assist;
 use App\Models\Turn;
+use App\Models\Fecha;
 use App\Models\Proceeding;
 use App\Models\ViewReportWeek;
 use App\Models\ConfigWapi;
@@ -185,6 +186,12 @@ class AssistController extends Controller
     }
 
     public function getJustifications(){
+        $fechas = Fecha::select('*',
+        DB::raw(' WEEK((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY), 7) AS week'),
+        DB::raw(' YEAR(fecha) AS anio')
+        )->orderBy('fecha','ASC')->get();
+
+
         $justifications = AssistJustification::with('user','paymen','type','state')->where('evidence','!=','')->whereRaw('WEEK(( created_at - INTERVAL (DAYOFWEEK(created_at) % 7) DAY), 7) = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)')
         ->whereRaw('YEAR(created_at) = YEAR((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY))')->get();
 
@@ -206,14 +213,46 @@ class AssistController extends Controller
         $types = JustificationType::all();
         $percentage = PaymenPercentage::all();
         $states = JustificationState::all();
+
         $res = [
             "justifications"=>$justifications,
             "types"=>$types,
             "porcentages"=>$percentage,
-            "states"=>$states
+            "states"=>$states,
+            "fechas"=>$fechas
         ];
         return response($res,200);
     }
+
+    public function getFiltJustifications(Request $request){
+
+        $anio = $request->anio;
+        $min = $request->min;
+        $max = $request->max;
+
+
+        $justifications = AssistJustification::with('user','paymen','type','state')->where('evidence','!=','')->whereRaw('WEEK(( created_at - INTERVAL (DAYOFWEEK(created_at) % 7) DAY), 7) BETWEEN ? AND ? ', [$min, $max])
+        ->whereRaw('YEAR(created_at) = ?', [$anio])->get();
+
+        foreach($justifications as $justification){
+            $userId = $justification['_user'];
+            $folderName = $justification['evidence'];
+            $folderPath = public_path("multimedia/profiles/{$userId}/justifications/{$folderName}");
+
+            if (!file_exists($folderPath) || !is_dir($folderPath)) {
+                $justification['files'] = [];
+            }
+            $files = array_values(array_diff(scandir($folderPath), ['.', '..'])); // Excluye `.` y `..`
+
+            $filesWithUrls = array_map(function ($file) use ($userId, $folderName) {
+                    return  "profiles/{$userId}/justifications/{$folderName}/{$file}";
+            }, $files);
+            $justification['files']= $filesWithUrls;
+        }
+        return response($justifications,200);
+    }
+
+
 
     public function changeStatus(Request $request){
         $justification = AssistJustification::find($request->id);
@@ -332,17 +371,27 @@ class AssistController extends Controller
     }
 
     public function getReportWeek(){
-        $report = ViewReportWeek::select('*',
-        DB::raw('faltas(LUNES) +  faltas(MARTES) +faltas(MIERCOLES) +faltas(JUEVES) +faltas(VIERNES) +faltas(SABADO) +faltas(DOMINGO)  AS FALTAS'),
-        DB::raw('retardos(LUNES) + retardos(MARTES) + retardos(MIERCOLES) + retardos(JUEVES) + retardos(VIERNES) + retardos(SABADO) + retardos(DOMINGO) AS RETARDOS'),
-        DB::raw('vacaciones(LUNES) + vacaciones(MARTES) + vacaciones(MIERCOLES) + vacaciones(JUEVES) + vacaciones(VIERNES) + vacaciones(SABADO) + vacaciones(DOMINGO)  AS VACACIONES'))
-        ->get();
+        $date = now()->format('Y-m-d');
+        $fechas = Fecha::select('*',
+        DB::raw(' WEEK((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY), 7) AS week'),
+        DB::raw(' YEAR(fecha) AS anio')
+        )->orderBy('fecha','ASC')->get();
+
+        $filtradas = $fechas->filter(fn($item) => $item->fecha == $date);
+        $oing = $filtradas->last();
+        $report =  DB::select("CALL obtReport(?, ?, ?)", [ $oing->week,  $oing->week,  $oing->anio]);
         $devices = AssistDevice::all();
         $res = [
             "report"=>$report,
-            "devices"=>$devices
+            "devices"=>$devices,
+            "fechas"=>$fechas,
         ];
         return response()->json($res,200);
+    }
+
+    public function getFiltReport(Request $request){
+        $report =  DB::select("CALL obtReport(?, ?, ?)", [ $request->min,  $request->max,  $request->anio]);
+        return response()->json($report,200);
     }
 
     public function addProceedings(Request $request){
@@ -429,7 +478,6 @@ class AssistController extends Controller
         }
         return response()->json($goals,200);
     }
-
 
     public function getRegisDeviceStore($sid,$d){
         $goals = [];

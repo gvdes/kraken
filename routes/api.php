@@ -219,6 +219,8 @@ Route::middleware('kraken')->group(function(){
             Route::post('addProceedings','addProceedings');
             Route::post('addDevice','addDevice');
             Route::post('changeStatus','changeStatus');
+            Route::post('getFiltReport','getFiltReport');
+            Route::post('getFiltJustifications','getFiltJustifications');
             Route::post('getRegisDevice/{d}','getRegisDevice');
             Route::post('changeDate/{d}','changeDate');
             Route::delete('deleteAttendance/{d}','deleteAttendance');
