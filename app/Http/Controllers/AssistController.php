@@ -15,6 +15,7 @@ use App\Models\Turn;
 use App\Models\Fecha;
 use App\Models\Proceeding;
 use App\Models\ViewReportWeek;
+use App\Models\UserRol;
 use App\Models\ConfigWapi;
 use Rats\Zkteco\Lib\ZKTeco;
 use Illuminate\Support\Facades\DB;
@@ -140,7 +141,9 @@ class AssistController extends Controller
 
     public function form(Request $request){
         $store = $request->route('sid');
-        $staff = User::where('_store',$store)->get();
+        $uid = $request->fixeds;
+        $area = UserRol::with('area')->where('id',$uid->rol)->first();
+        $staff = User::with('rol')->where([['_store',$store],['_state','!=',4]])->whereHas('rol', function($q) use($area) { $q->where('_area',$area->area['id']); })->get();
         $types = JustificationType::all();
         // $RcIds = implode(',',$staff->pluck('id')->toArray());
         $justifications = AssistJustification::with('user','paymen','type','state')->where('evidence','!=','')->whereIn('_user',$staff->pluck('id')->toArray())->whereRaw('WEEK(( created_at - INTERVAL (DAYOFWEEK(created_at) % 7) DAY), 7) = WEEK((CURDATE() - INTERVAL (DAYOFWEEK(CURDATE()) % 7) DAY), 7)')
@@ -251,8 +254,6 @@ class AssistController extends Controller
         }
         return response($justifications,200);
     }
-
-
 
     public function changeStatus(Request $request){
         $justification = AssistJustification::find($request->id);
