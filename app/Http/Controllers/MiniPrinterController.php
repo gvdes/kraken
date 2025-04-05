@@ -30,6 +30,7 @@ class MiniPrinterController extends Controller
     }
 
     public function CliOrder($order,$status,$cash){//Impresion de order para el cliente
+        try{
         $encabezado = $status == 2 ? 'Favor de escanear el pedido' : 'Favor de esperar su turno';
         $printer = $this->printer;
         if(!$printer){
@@ -93,16 +94,16 @@ class MiniPrinterController extends Controller
         $printer->cut();
         $printer->close();
         return true;
-        try{
         } catch(\Exception $e){
             return false;
         }
     }
 
     public function orderReceip($order,$status,$cash){// Impresion de preventa de la sucursal encabezado
+        try{
         $printer = $this->printer;
         if(!$printer){
-            return false;
+            throw new \Exception("No se encontró la impresora.");
         }
         $sumary = $order->bodie->reduce(function($sumary, $product){
             $sumary['models'] = $sumary['models'] + 1;
@@ -111,6 +112,14 @@ class MiniPrinterController extends Controller
             return $sumary;
         }, ["models" => 0, "units"=>0, "total"=>0]);
         $printer->setJustification(Printer::JUSTIFY_CENTER);
+
+        if($order->printer>0){
+            $printer->setTextSize(2,1);
+            $printer->setReverseColors(true);
+            $printer->text("REIMPRESION \n");
+            $printer->setReverseColors(false);
+        }
+
         if($order->_order_by){
             $printer->setTextSize(2,2);
             $printer->setEmphasis(true);
@@ -121,6 +130,7 @@ class MiniPrinterController extends Controller
             $printer->setEmphasis(false);
             $printer->setReverseColors(false);
         }
+
         $printer->setTextSize(1,2);
         $printer->text("Pedido para: \n");
         $printer->setTextSize(2,2);
@@ -203,6 +213,9 @@ class MiniPrinterController extends Controller
         $printer->cut();
         $printer->close();
         return true;
+        } catch(\Exception $e){
+            return false;
+        }
     }
 
     public function printBodyTicket($printer, $product, $y){ //Impresion de articulos para preventa en sucursal
@@ -249,6 +262,32 @@ class MiniPrinterController extends Controller
         }
         $printer->setEmphasis(false);
         $printer->feed(1);
+    }
+
+    public function testPrint(){
+        try{
+            $printer = $this->printer;
+            if(!$printer){
+                return false;
+            }
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->text("--------------------------------------------\n");
+            $printer->setTextSize(2,1);
+            $printer->text("--PRUEBA DE IMPRESION--\n");
+            $printer->setTextSize(1,1);
+            $printer->text("--------------------------------------------\n");
+            $printer->setJustification(Printer::JUSTIFY_LEFT);
+            $printer->text("IP: ".$this->ip."\n");
+            $printer->text("PORT: ".$this->port."\n");
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->feed(1);
+            $printer->text("GRUPO VIZCARRA\n");
+            $printer->cut();
+            $printer->close();
+            return true;
+        } catch(\Exception $e){
+            return false;
+        }
     }
 
 }

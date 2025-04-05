@@ -18,4 +18,6 @@ class Store extends Model
     public function users(){ return $this->hasMany('App\Models\User','_store');}
     public function warehouses(){ return $this->hasMany('App\Models\Warehouse','_store'); }
     public function restock(){ return $this->hasManyThrough('App\Models\RestockOrder', 'App\Models\Warehouse','_store','warehouse_from','id','id'); }
+    public function prints(){ return $this->hasMany('App\Models\Printer','_store');}
+    public function cash(){ return $this->hasMany('App\Models\CashRegister','_store');}
 }

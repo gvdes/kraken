@@ -72,6 +72,10 @@ class Kernel extends HttpKernel
         'UseProducts' => \App\Http\Middleware\UseProducts::class,
         'UseAssist' => \App\Http\Middleware\UseAssist::class,
         'UseIndicator' => \App\Http\Middleware\UseIndicator::class,
+        'UsePrinter' => \App\Http\Middleware\UsePrinter::class,
+        'UseCash' => \App\Http\Middleware\UseCash::class,
+
+
 
     ];
 }

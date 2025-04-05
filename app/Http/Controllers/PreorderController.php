@@ -266,6 +266,7 @@ class PreorderController extends Controller
     }
 
     public function changeStatus(Request $request){
+        $uid = $request->fixeds;
         $store = $request->route('sid');
         $onWrhs = $request->query('warehouses') ?
         explode(",",$request->query('warehouses')) :
@@ -286,7 +287,7 @@ class PreorderController extends Controller
         $printer = isset($request->printer) ? $request->printer : null ;
         $typelog = 7;
         $ip = $request->ip();
-        $create_log = $this->createLog($status, $typelog, $order, $ip, $printer);
+        $create_log = $this->createLog($status, $typelog, $order, $ip, $printer,$uid->uid);
         if($create_log['log']){
             $order->_state = $create_log['status'];
             $order->save();
@@ -310,12 +311,13 @@ class PreorderController extends Controller
         return response()->json($printers,200);
     }
 
-    public function createLog($_status, $typelog,$order, $ip, $print = null){
+    public function createLog($_status, $typelog,$order, $ip, $print = null,$requestUs = null){
         $store = $order->_store;
         $user = $order->_created_by;
         $status = $_status;
         $client = $order->_client;
         $name = $order->name;
+        $uid = $requestUs;
 
         $log = [
             "details"=>json_encode([
@@ -361,7 +363,13 @@ class PreorderController extends Controller
                     $order->_cash = $cashier->id;
                     $order->save();
                     $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
-                    $cellerPrinter->CliOrder($order,$status,$cashier);
+                    $res =  $cellerPrinter->CliOrder($order,$status,$cashier);
+                    if($res){
+                    }else{
+                        $islog = false;
+                        $message = "No se logro imprimir";
+                        break;
+                    }
                     $islog = $create_log;
                     $message = "Status cambiado";
                     break;
@@ -394,13 +402,29 @@ class PreorderController extends Controller
                         $order->save();
                         $order->fresh(['cash' => fn($q) => $q->with(['cashier.printer_order'])->max('created_at')]);
                         $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
-                        $cellerPrinter->CliOrder($order,$status,$cashier);
+                        $res = $cellerPrinter->CliOrder($order,$status,$cashier);
+                        if($res){
+                            $order->increment('printer');
+                            $order->save();
+                        }else{
+                            $islog = false;
+                            $message = "No se logro imprimir";
+                            break;
+                        }
                     }
 
                     $printer = Printer::find($order['cash']['cashier']['_printer_order']);// se obtinene la impresora por la que saldran los pedidos de la caja seleccionada
                     $cashier = CashRegister::find($order['cash']['id']);// se obtinene la caja
                     $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
-                    $cellerPrinter->orderReceip($order,$status,$cashier);
+                    $res = $cellerPrinter->orderReceip($order,$status,$cashier);
+                    if($res){
+                        $order->increment('printer');
+                        $order->save();
+                    }else{
+                        $islog = false;
+                        $message = "No se logro imprimir";
+                        break;
+                    }
                     $islog = $create_log;
                     $message = "Status cambiado";
 
@@ -410,22 +434,113 @@ class PreorderController extends Controller
                     $log['_state'] = 4;
                 }
             case 4://surtiendo//aqui si se debe de revisar que impresora de almacen va a imprimir dependiendo de la caja que tenga
-                $create_log= $this->logs($log);
-                $islog = $create_log;
-                $message = "Status cambiado";
-                // $printer = Printer::find($print);
-                // $cash = $this->selectCash($store);
-                // $cashier = CashRegister::find($cash);
-                // $order = Order::find($order->id);
-                // $order->_cash = $cashier->id;
-                // $order->save();
-                // $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
-                // $cellerPrinter->CliOrder($order,$status,$cashier);
+                //se debe de poner en los productos quien esta surtiendo el pedido
+                $validate = $this->verifyProcess($status,$store);
+                if($validate){
+                    $create_log= $this->logs($log);//se genera el log de el pedido
+                    if(is_null($order['_cash'])){
+                        $printer = Printer::find($print);
+                        if($order->_order_by){
+                            $cash = $order->order['_cash'];
+                        } else {
+                            $selectecCash = $this->selectCash($store);
+                            if($selectecCash['message']){
+                                $cash = $selectecCash['cash'];
+                            }else{
+                                $islog = false;
+                                $message = "No hay cajas abiertas";
+                                break;
+                            }
+                        }
+                        $cashier = CashRegister::find($cash);
+                        $order = Order::find($order->id);
+                        $order->_cash = $cashier->id;
+                        $order->save();
+                        $order->fresh(['cash' => fn($q) => $q->with(['cashier.printer_order'])->max('created_at')]);
+                        $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
+                        $res = $cellerPrinter->CliOrder($order,$status,$cashier);
+                        if($res){
+                            $order->increment('printer');
+                            $order->save();
+                        }else{
+                            $islog = false;
+                            $message = "No se logro imprimir";
+                            break;
+                        }
+                    }
+                    if($order->pinter > 0){
+                        $printer = Printer::find($order['cash']['cashier']['_printer_order']);// se obtinene la impresora por la que saldran los pedidos de la caja seleccionada
+                        $cashier = CashRegister::find($order['cash']['id']);// se obtinene la caja
+                        $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
+                        $res = $cellerPrinter->orderReceip($order,$status,$cashier);
+                        if($res){
+                            $order->increment('printer');
+                            $order->save();
+                        }else{
+                            $islog = false;
+                            $message = "No se logrdo imprimir";
+                            break;
+                        }
+                    }
+                    $islog = $create_log;
+                    $message = "Status cambiado";
+                    $orderBodie = OrderBodie::where('_order',$order->id)->update(['_assorted_by'=>$uid]);
+                    break;
+                }else{
+                    $islog = false;
+                    $message = "No esta activo el proceso";
+                    break;
+                }
+            case 5:// por validar
+                $validate = $this->verifyProcess($status,$store);
+                if($validate){
+                    $create_log= $this->logs($log);//se genera el log de el pedido
+                    $islog = $create_log;
+                    $message = "Status cambiado";
+                    break;
+                }else{
+                    $islog = false;
+                    $message = "No esta activo el proceso";
+                    break;
+                }
+            case 6://checkout
+                $validate = $this->verifyProcess($status,$store);
+                if($validate){
+                    $create_log= $this->logs($log);//se genera el log de el pedido
+                    $islog = $create_log;
+                    $message = "Status cambiado";
+                    break;
+                }else{
+                    $islog = false;
+                    $message = "No esta activo el proceso";
+                    break;
+                }
+            case 7://por cobrar
+                $validate = $this->verifyProcess($status,$store);
+                if($validate){
+                    $create_log= $this->logs($log);//se genera el log de el pedido
+                    $islog = $create_log;
+                    $message = "Status cambiado";
+                    break;
+                }else{
+                    $islog = false;
+                    $message = "No esta activo el proceso";
+                    break;
+                }
+            case 8:
+                $validate = $this->verifyProcess($status,$store);
+                if($validate){
+                    $create_log= $this->logs($log);//se genera el log de el pedido
+                    $islog = $create_log;
+                    $message = "Status cambiado";
+                    break;
+                }else{
+                    $islog = false;
+                    $message = "No esta activo el proceso";
+                    break;
+                }
+            case 9:
             break;
-            case 5:
-
-            break;
-
         }
         $res = [
             "log"=>$islog,
@@ -474,6 +589,46 @@ class PreorderController extends Controller
             ];
         }
         return $res;
+    }
+
+    public function reprintOrderWarehouse(Request $request){
+        $uid = $request->fixeds;
+        $store = $request->route('sid');
+        $onWrhs = $request->query('warehouses') ?
+        explode(",",$request->query('warehouses')) :
+        Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
+        $order = Order::with([
+            'store',
+            'user',
+            'state',
+            'bodie.product.category.familia.seccion',
+            'bodie.rates',
+            'cash' => fn($q) => $q->with(['cashier.printer_order'])->max('created_at'),
+            'bodie.product.stocks' => fn($q) => $q->whereHas('warehouse', fn($q) => $q->where('_type', 1))
+                ->with('warehouse')->whereIn("_warehouse", $onWrhs),
+            'bodie.product.locations' => fn($q) => $q->whereHas('warehouse', fn($q) => $q->where('_type', 1))
+                ->with("warehouse")->whereIn("_warehouse", $onWrhs)
+        ])->where('id',$request->id)->first();
+        $printer = Printer::find($request->print);
+        $status = $order->_state;
+        $cashier = $order->cash;
+
+        $cellerPrinter = new MiniPrinterController($printer->ip_address, $printer->_port,5);
+        $res = $cellerPrinter->orderReceip($order,$status,$cashier);
+        if($res){
+            $order->increment('printer');
+            $order->save();
+            $message = 'Fue Impresa Correctamente';
+            return response()->json($message,200);
+        }else{
+            $message = 'La impresora no tienen conexion';
+            return response()->json($message,500);
+        }
+
+    }
+
+    public function preorder(Request $request){
+
     }
 
 }

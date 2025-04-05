@@ -8,8 +8,12 @@ use App\Models\CashState;
 use App\Models\User;
 use App\Models\Printer;
 use App\Models\Store;
+use App\Models\Client;
+use App\Models\Warehouse;
 use App\Models\CashCashier;
 use App\Models\CashAutomate;
+use App\Models\DocumentType;
+use App\Models\TPV;
 use App\Models\CashLog;
 use Illuminate\Support\Facades\Http;
 
@@ -18,12 +22,29 @@ use Illuminate\Support\Facades\Http;
 
 class CashController extends Controller
 {
+
+    public function Index(){
+        $prints = Store::with(['cash.state','cash.tpv','cash.document'])->get();
+        $state = CashState::all();
+        $documents = DocumentType::all();
+        $tpv = TPV::all();
+        $res = [
+            "stores"=>$prints,
+            "state"=>$state,
+            "documents"=>$documents,
+            "tpv"=>$tpv
+        ];
+        return response()->json($res);
+    }
+
     public function getCash(Request $request){
         $store = $request->route('sid');
         $cashier = USER::where('_store',$store)->whereNotIn('_state',[3,4])->get();// todos los usuarios de la sucursal que esten disponibles
 
         $cash = CashRegister::with([
             'state',
+            'document',
+            'tpv',
             'cashier' => fn($q) => $q->with('user','printer','printer_order')->max('created_at')
             ])->where([['_store',$store]])->get();
 
@@ -158,4 +179,189 @@ class CashController extends Controller
     }
 
     public function automateCash(){}
+
+    public function getDocument(){
+        $document = DocumentType::all();
+        return response()->json($document);
+    }
+
+    public function editDocument(Request $request){
+        $document = $request->all();
+        if($document['id']){
+            $upd = DocumentType::find($document['id']);
+            $upd->name = $document['name'];
+            $upd->serie = $document['serie'];
+            $upd->save();
+            $res = $upd->fresh();
+            if($upd){
+                return response()->json($res,200);
+            }else{
+                return response()->json('No se logro actualizar el documento',500);
+            }
+        }else{
+            $newdoc = new DocumentType;
+            $newdoc->name=$document['name'];
+            $newdoc->serie=$document['serie'];
+            $newdoc->save();
+            $res = $newdoc->fresh();
+            if($newdoc){
+                return response()->json($res,200);
+            }else{
+                return response()->json('No se logro Insertar el documento',500);
+            }
+        }
+    }
+
+    public function getTPV(){
+        $clients = Client::where('_type',1)->get();
+        $warehouses = Warehouse::with(['store'])->where([['_type',1],['_state',0]])->get();
+        $tpvs = TPV::with(['warehouse.store','client'])->get();
+        $res = [
+            'clients'=>$clients,
+            'warehouses'=>$warehouses,
+            'tpv'=>$tpvs
+        ];
+        return response()->json($res);
+    }
+
+    public function addTPV(Request $request){
+        $tpv = new TPV;
+        $tpv->name = $request->name;
+        $tpv->_client = $request->_client;
+        $tpv->_warehouse = $request->_warehouse;
+        $tpv->header_ticket = $request->header_ticket;
+        $tpv->footer_ticket = $request->footer_ticket;
+        $tpv->logo = '';
+        $tpv->save();
+        $res = $tpv->load(['warehouse.store','client']);
+        if ($res) {
+            $uid = $res['id'];
+            $folderPath = public_path('multimedia/tpv/'.$uid.'/');
+            if (!file_exists($folderPath)) {
+                mkdir($folderPath, 0777, true);
+            }
+            if ($request->hasFile('logo')) {
+                $avatar = $request->file('logo');
+                $avatarPath = $folderPath . '/' . $avatar->getClientOriginalName();
+                $avatar->move($folderPath, $avatar->getClientOriginalName());
+                $tpv->logo = $avatar->getClientOriginalName();
+                $tpv->save();
+            }
+            return response()->json($res,200);
+        }else{
+            return response()->json('Hubo un problema en la insercion',500);
+        }
+    }
+
+    public function editTPV(Request $request){
+        $tpv = TPV::find($request->id);
+
+        $tpv->name = $request->name;
+        $tpv->_client = $request->_client;
+        $tpv->_warehouse = $request->_warehouse;
+        $tpv->header_ticket = $request->header_ticket;
+        $tpv->footer_ticket = $request->footer_ticket;
+
+        if ($request->hasFile('logo')) {
+            if ($tpv->logo) {
+                $oldLogoPath = public_path('multimedia/tpv/' . $tpv->id . '/' . $tpv->logo);
+                if (file_exists($oldLogoPath)) {
+                    unlink($oldLogoPath);
+                }
+            }
+
+            $folderPath = public_path('multimedia/tpv/'.$tpv->id.'/');
+            if (!file_exists($folderPath)) {
+                mkdir($folderPath, 0777, true);
+            }
+
+            $avatar = $request->file('logo');
+            $avatarPath = $folderPath . '/' . $avatar->getClientOriginalName();
+            $avatar->move($folderPath, $avatar->getClientOriginalName());
+            $tpv->logo = $avatar->getClientOriginalName();
+        }
+
+        $tpv->save();
+        $res = $tpv->load(['warehouse.store','client']);
+
+        if ($res) {
+            return response()->json($res,200);
+        } else {
+            return response()->json('Hubo un problema en la insercion',500);
+        }
+    }
+
+    public function mosFIle($id){
+        $tpv = TPV::find($id);
+        $folderName = $tpv->logo;
+        $folderPath = public_path("multimedia/tpv/{$tpv->id}/{$folderName}");
+        if (file_exists($folderPath)) {
+            return response()->file($folderPath);
+        }
+    }
+
+    public function editCash(Request $request){
+
+        $suc = Store::where('id',1)->first();
+
+        $cash = $request->all();
+        if($cash['id']){
+            $update = CashRegister::find($cash['id']);
+            $update->name = $cash['name'];
+            $update->_store = $cash['_store'];
+            $update->_tpv = $cash['tpv']['id'];
+            $update->_document = $cash['document']['id'];
+            $update->save();
+            $res = $update->load(['state','tpv','document']);
+            if($res){
+                return response()->json($res,200);
+            }else{
+                return response()->json('No se realizo la actualizacion',500);
+            }
+        }else{
+            $suc = Store::where('id',1)->first();
+            $obtUltTermi = Http::get($suc->local_domain.':'.$suc->local_port.'/addicted/public/api/cash/getMaxTer');
+            if($obtUltTermi->status() == 200){
+                $idter=$obtUltTermi['ID']+1;
+            }else{
+                return response()->json(["mssg"=>'No se obtuvo el ultimo numero de terminal'],500);
+            };
+            $cashier = new CashRegister;
+            $cashier->name = $cash['name'];
+            $cashier->terminal = $idter;
+            $cashier->_store = $cash['_store'];
+            $cashier->_state = 1;
+            $cashier->_tpv = $cash['tpv']['id'];
+            $cashier->_document = $cash['document']['id'];
+            $cashier->save();
+            $res = $cashier->load(['state','document','tpv']);
+            if($res){
+                $addTer = Http::post($suc->local_domain.':'.$suc->local_port.'/addicted/public/api/cash/addTerm',$res);
+                if($addTer->status() == 200){
+                }else{
+                    return response()->json(["mssg"=>'No se obtuvo el Inserto de terminal'],500);
+                };
+                return response()->json($res,200);
+            }else{
+                return response()->json('No se inserto',500);
+            }
+        }
+    }
+
+    public function getCashAssigned(Request $request){
+        $uid = $request->fixeds->uid;
+        $store = $request->route('sid');
+        $now = now()->format('Y-m-d');
+        $cash = CashRegister::with([
+            'state',
+            'document',
+            'tpv',
+            'cashier'
+        ])
+        ->where([['_store', $store],['_state',1]])
+        ->whereHas('cashier', function($q) use($uid,$now) { $q->with('user', 'printer', 'printer_order')->where('_cashier', $uid)->whereDate('created_at',$now);})
+        ->first();
+
+        return response()->json($cash,200);
+    }
 }

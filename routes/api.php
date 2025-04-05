@@ -21,6 +21,8 @@ use App\Http\Controllers\PreorderController;
 use App\Http\Controllers\AssistController;
 use App\Http\Controllers\CashController;
 use App\Http\Controllers\IndicatorController;
+use App\Http\Controllers\PrinterController;
+
 
 
 
@@ -124,10 +126,17 @@ Route::middleware('kraken')->group(function(){
                 Route::post('/removeProduct', 'removeProduct');
                 Route::post('/changeStatus','changeStatus');
                 Route::post('/changeConfig','changeConfig');
-
+                Route::post('/reprintOrderWarehouse','reprintOrderWarehouse');
             });
+
+            Route::prefix('Printers')->controller(PrinterController::class)->group(function(){
+                Route::get('getPrinterStore','getPrinterStore');
+                Route::post('testPrint','testPrint');
+            });
+
             Route::prefix('cash')->controller(CashController::class)->group(function(){
                 Route::get('/getCash', 'getCash');
+                Route::get('getCashAssigned','getCashAssigned');
                 Route::post('/OpenCash', 'OpenCash');
                 Route::post('/closeBox', 'closeBox');
             });
@@ -248,6 +257,24 @@ Route::middleware('kraken')->group(function(){
             Route::post('changeUserBonues','changeUserBonues');
             Route::post('getformResponses','getformResponses');
             Route::post('getCalculateClassUser','getCalculateClassUser');
+            Route::post('getCalculateClassUserFilter','getCalculateClassUserFilter');
+        });
+        Route::prefix('cash')->middleware('UseCash')->controller(CashController::class)->group(function(){
+            Route::get('Index','Index');
+            Route::get('getDocument','getDocument');
+            Route::get('getTPV','getTPV');
+            Route::get('mosFIle/{id}','mosFIle');
+            Route::post('editDocument','editDocument');
+            Route::post('addTPV','addTPV');
+            Route::post('editTPV','editTPV');
+            Route::post('editCash','editCash');
+        });
+
+        Route::prefix('Printers')->middleware('UsePrinter')->controller(PrinterController::class)->group(function(){
+            Route::get('index','index');
+            Route::post('testPrint','testPrint');
+            Route::post('editPrint','editPrint');
+            Route::post('deletePrint','deletePrint');
         });
         Route::prefix('Indicators')->controller(IndicatorController::class)->group(function(){
             Route::get('getForms','getForms');
