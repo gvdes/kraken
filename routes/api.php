@@ -22,6 +22,8 @@ use App\Http\Controllers\AssistController;
 use App\Http\Controllers\CashController;
 use App\Http\Controllers\IndicatorController;
 use App\Http\Controllers\PrinterController;
+use App\Http\Controllers\ClientController;
+
 
 
 
@@ -151,6 +153,8 @@ Route::middleware('kraken')->group(function(){
                 Route::post('/deleteTurnUser', 'deleteTurnUser');
                 Route::post('/addFile', 'addFile');
                 Route::post('/addForm', 'addForm');
+                Route::post('getReportUserWeek','getReportUserWeek');
+                Route::post('getReportUserWeekFilt','getReportUserWeekFilt');
                 Route::post('getRegisDevice/{d}','getRegisDeviceStore');
                 Route::post('changeDate/{d}','changeDateStore');
             });
@@ -235,7 +239,14 @@ Route::middleware('kraken')->group(function(){
             Route::delete('deleteAttendance/{d}','deleteAttendance');
 
         });
-        Route::prefix('Indicators')->middleware('UseIndicator')->controller(IndicatorController::class)->group(function(){
+        Route::prefix('Clients')->middleware('UseClients')->controller(ClientController::class)->group(function(){
+            Route::get('getClients','getClients');
+            Route::post('editClient','editClient');
+            Route::post('replyClient','replyClient');
+
+        });
+
+        Route::prefix('Indicators')->middleware('UseClients')->controller(IndicatorController::class)->group(function(){
             Route::get('index','index');
             Route::get('getForms','getForms');
             Route::get('getClass','getClass');

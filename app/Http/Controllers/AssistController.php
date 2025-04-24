@@ -395,6 +395,36 @@ class AssistController extends Controller
         return response()->json($report,200);
     }
 
+    public function getReportUserWeek(Request $request){
+        $user = $request->user;
+        $date = now()->format('Y-m-d');
+        $fechas = Fecha::select('*',
+        DB::raw(' WEEK((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY), 7) AS week'),
+        DB::raw(' YEAR(fecha) AS anio')
+        )->orderBy('fecha','ASC')->get();
+
+        $filtradas = $fechas->filter(fn($item) => $item->fecha == $date);
+        $oing = $filtradas->last();
+        $report =  collect(DB::select("CALL obtReport(?, ?, ?)", [ $oing->week,  $oing->week,  $oing->anio]))->where('ID', $user);
+        $res = [
+            "report"=>array_values($report->toArray()),
+            "fechas"=>$fechas,
+        ];
+        return response()->json($res,200);
+    }
+
+    public function getReportUserWeekFilt(Request $request){
+        // return $request->all();
+        $user = $request->user;
+        $inicio = $request->min;
+        $final = $request->max;
+        $year = $request->anio;
+        $rawReport = collect(DB::select("CALL obtReport(?, ?, ?)", [$inicio, $final, $year]))
+        ->where('ID', $user)->toArray();
+
+        return response()->json(array_values($rawReport),200);
+    }
+
     public function addProceedings(Request $request){
         $insert =  $request->all();
         $adding = Proceeding::insert($insert);
