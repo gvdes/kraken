@@ -219,7 +219,10 @@ Route::middleware('kraken')->group(function(){
         });
         Route::prefix('Products')->middleware('UseProducts')->controller(ProductController::class)->group(function(){
             Route::get('index','index');
+
             Route::get('getProduct/{product}','getProduct');
+            Route::post('searchProd','searchProd');
+
         });
         Route::prefix('Assist')->middleware('UseAssist')->controller(AssistController::class)->group(function(){
             Route::get('index','index');
@@ -246,7 +249,7 @@ Route::middleware('kraken')->group(function(){
 
         });
 
-        Route::prefix('Indicators')->middleware('UseClients')->controller(IndicatorController::class)->group(function(){
+        Route::prefix('Indicators')->middleware('UseIndicator')->controller(IndicatorController::class)->group(function(){
             Route::get('index','index');
             Route::get('getForms','getForms');
             Route::get('getClass','getClass');

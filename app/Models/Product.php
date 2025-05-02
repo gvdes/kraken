@@ -27,7 +27,9 @@ class Product extends Model
 
     public function media(){ return $this->hasMany('App\Models\ProductMedia','_product','id'); }
 
-    public function provider(){ return $this->hasOne('App\Models\Provider','id','_state'); }
+    public function provider(){ return $this->hasOne('App\Models\Provider','id','_provider'); }
+    public function maker (){ return $this->hasOne('App\Models\Make','id','_maker'); }
+
 
     public function Prices(){ return $this->hasMany('App\Models\ProductPrices','_product','id'); }
 
