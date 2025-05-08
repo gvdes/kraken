@@ -17,6 +17,7 @@ use App\Models\UserStates;
 use App\Models\UserLog;
 use App\Models\RolDefaultPermission;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 
@@ -123,14 +124,19 @@ class UsersController extends Controller
                     $res = $user->fresh()->toArray();
                     if ($res) {
                         $uid = $res['id'];
-                        $folderPath = public_path('multimedia/profiles/'.$uid.'/');
-                        if (!file_exists($folderPath)) {
-                            mkdir($folderPath, 0777, true);
-                        }
+                        // $folderPath = public_path('multimedia/profiles/'.$uid.'/');
+                        // if (!file_exists($folderPath)) {
+                        //     mkdir($folderPath, 0777, true);
+                        // }
                         if ($request->hasFile('avatar')) {
                             $avatar = $request->file('avatar');
-                            $avatarPath = $folderPath . '/' . $avatar->getClientOriginalName();
-                            $avatar->move($folderPath, $avatar->getClientOriginalName());
+                            $fileName = $avatar->getClientOriginalName();
+                            $folderPath = 'multimedia/profiles/'.$uid.'/'.$fileName;
+                            $route = Storage::put($folderPath, file_get_contents($avatar));
+                            // $avatarPath = $folderPath . '/' . $avatar->getClientOriginalName();
+                            // $avatar->move($folderPath, $avatar->getClientOriginalName());
+                            // $avatar->move($folderPath, $avatar->getClientOriginalName());
+
                             $user->avatar = $avatar->getClientOriginalName();
                             $user->save();
                         }

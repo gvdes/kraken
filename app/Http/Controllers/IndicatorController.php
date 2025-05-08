@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Models\Store;
 use App\Models\Fecha;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class IndicatorController extends Controller
 {
@@ -329,15 +330,18 @@ class IndicatorController extends Controller
                 if(isset($question['evidence'])){
                     if ($request->hasFile("question.$index.evidence")) {
                         $folderName = uniqid();
-                        $folderPath = public_path('multimedia/forms/' . $folderName);
+                        // $folderPath = public_path('multimedia/forms/' . $folderName);
+                        $folderPath = 'multimedia/forms/'.$folderName;
                         // Crear el directorio si no existe
-                        if (!file_exists($folderPath)) {
-                            mkdir($folderPath, 0777, true);
-                        }
+                        // if (!file_exists($folderPath)) {
+                        //     mkdir($folderPath, 0777, true);
+                        // }
                         $files = $request->file("question.$index.evidence"); // Accede a los archivos de 'evidence'
                         foreach ($files as $file) {
+                            // $fileName = $file->getClientOriginalName();
                             $fileName = $file->getClientOriginalName();
-                            $file->move($folderPath, $fileName);
+                            $route = Storage::put($folderPath . '/' . $fileName, file_get_contents($file));
+                            // $file->move($folderPath, $fileName);
                         }
                         $questResp->text = $folderName;
                     }
@@ -529,15 +533,29 @@ class IndicatorController extends Controller
         foreach($preguntas as $pregunta){
             $folderName = $pregunta['question']['_type'] == 3 ? $pregunta['text'] : false ;
             if($folderName){
-                $folderPath = public_path("multimedia/forms/{$folderName}");
-                if (!file_exists($folderPath) || !is_dir($folderPath)) {
-                    $pregunta['files'] = [];
-                }
-                $files = array_values(array_diff(scandir($folderPath), ['.', '..'])); // Excluye `.` y `..`
-                $filesWithUrls = array_map(function ($file) use ( $folderName) {
-                    return  "forms/{$folderName}/{$file}";
-                }, $files);
-            $pregunta['files']= $filesWithUrls;
+                $folderPath = "multimedia/forms/{$folderName}";
+                $files = Storage::files($folderPath);
+
+                $filesWithUrls = collect($files)->map(function ($path) {
+                    return [
+                        'path' => $path,
+                        // 'url' => Storage::temporaryUrl($path, now()->addMinutes(10))
+                        'url' => Storage::Url($path)
+
+                    ];
+                });
+
+                $pregunta['files'] = $filesWithUrls;
+
+            //     $folderPath = public_path("multimedia/forms/{$folderName}");
+            //     if (!file_exists($folderPath) || !is_dir($folderPath)) {
+            //         $pregunta['files'] = [];
+            //     }
+            //     $files = array_values(array_diff(scandir($folderPath), ['.', '..'])); // Excluye `.` y `..`
+            //     $filesWithUrls = array_map(function ($file) use ( $folderName) {
+            //         return  "forms/{$folderName}/{$file}";
+            //     }, $files);
+            // $pregunta['files']= $filesWithUrls;
             }
         }
         $users = User::with('rol.area')->get();

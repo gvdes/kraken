@@ -19,6 +19,7 @@ use App\Models\UserRol;
 use App\Models\ConfigWapi;
 use Rats\Zkteco\Lib\ZKTeco;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AssistController extends Controller
 {
@@ -168,14 +169,18 @@ class AssistController extends Controller
         $justification->notes = $jstf['notes'];
         if ($request->hasFile("evidence")) {
             $folderName = uniqid();
-            $folderPath = public_path('multimedia/profiles/'.$jstf['user'].'/justifications/'.$folderName);
-            if (!file_exists($folderPath)) {
-                mkdir($folderPath, 0777, true);
-            }
+            // $folderPath = public_path('multimedia/profiles/'.$jstf['user'].'/justifications/'.$folderName);
+             $folderPath = 'multimedia/profiles/'.$jstf['user'].'/justifications/'.$folderName;
+
+            // if (!file_exists($folderPath)) {
+            //     mkdir($folderPath, 0777, true);
+            // }
             $files = $request->file("evidence");
             foreach ($files as $file) {
                 $fileName = $file->getClientOriginalName();
-                $file->move($folderPath, $fileName);
+                $route = Storage::put($folderPath . '/' . $fileName, file_get_contents($file));
+                // $fileName = $file->getClientOriginalName();
+                // $file->move($folderPath, $fileName);
             }
             $justification->evidence = $folderName;
         }
@@ -201,17 +206,31 @@ class AssistController extends Controller
         foreach($justifications as $justification){
             $userId = $justification['_user'];
             $folderName = $justification['evidence'];
-            $folderPath = public_path("multimedia/profiles/{$userId}/justifications/{$folderName}");
 
-            if (!file_exists($folderPath) || !is_dir($folderPath)) {
-                $justification['files'] = [];
-            }
-            $files = array_values(array_diff(scandir($folderPath), ['.', '..'])); // Excluye `.` y `..`
+            // $folderPath = public_path("multimedia/profiles/{$userId}/justifications/{$folderName}");
+            $folderPath = "multimedia/profiles/{$userId}/justifications/{$folderName}";
+            $files = Storage::files($folderPath);
 
-            $filesWithUrls = array_map(function ($file) use ($userId, $folderName) {
-                    return  "profiles/{$userId}/justifications/{$folderName}/{$file}";
-            }, $files);
-            $justification['files']= $filesWithUrls;
+            $filesWithUrls = collect($files)->map(function ($path) {
+                return [
+                    'path' => $path,
+                    // 'url' => Storage::temporaryUrl($path, now()->addMinutes(10))
+                    'url' => Storage::Url($path)
+
+                ];
+            });
+
+            $justification['files'] = $filesWithUrls;
+
+            // if (!file_exists($folderPath) || !is_dir($folderPath)) {
+            //     $justification['files'] = [];
+            // }
+            // $files = array_values(array_diff(scandir($folderPath), ['.', '..'])); // Excluye `.` y `..`
+
+            // $filesWithUrls = array_map(function ($file) use ($userId, $folderName) {
+            //         return  "profiles/{$userId}/justifications/{$folderName}/{$file}";
+            // }, $files);
+            // $justification['files']= $filesWithUrls;
         }
         $types = JustificationType::all();
         $percentage = PaymenPercentage::all();
@@ -240,17 +259,30 @@ class AssistController extends Controller
         foreach($justifications as $justification){
             $userId = $justification['_user'];
             $folderName = $justification['evidence'];
-            $folderPath = public_path("multimedia/profiles/{$userId}/justifications/{$folderName}");
+            // $folderPath = public_path("multimedia/profiles/{$userId}/justifications/{$folderName}");
+            $folderPath = "multimedia/profiles/{$userId}/justifications/{$folderName}";
+            $files = Storage::files($folderPath);
+            $filesWithUrls = collect($files)->map(function ($path) {
+                return [
+                    'path' => $path,
+                    // 'url' => Storage::temporaryUrl($path, now()->addMinutes(10))
+                    'url' => Storage::Url($path)
 
-            if (!file_exists($folderPath) || !is_dir($folderPath)) {
-                $justification['files'] = [];
-            }
-            $files = array_values(array_diff(scandir($folderPath), ['.', '..'])); // Excluye `.` y `..`
+                ];
+            });
 
-            $filesWithUrls = array_map(function ($file) use ($userId, $folderName) {
-                    return  "profiles/{$userId}/justifications/{$folderName}/{$file}";
-            }, $files);
-            $justification['files']= $filesWithUrls;
+            $justification['files'] = $filesWithUrls;
+
+
+            // if (!file_exists($folderPath) || !is_dir($folderPath)) {
+            //     $justification['files'] = [];
+            // }
+            // $files = array_values(array_diff(scandir($folderPath), ['.', '..'])); // Excluye `.` y `..`
+
+            // $filesWithUrls = array_map(function ($file) use ($userId, $folderName) {
+            //         return  "profiles/{$userId}/justifications/{$folderName}/{$file}";
+            // }, $files);
+            // $justification['files']= $filesWithUrls;
         }
         return response($justifications,200);
     }
