@@ -194,6 +194,7 @@ Route::middleware('kraken')->group(function(){
     ->group(function(){
         Route::prefix('accounts')->middleware('UseUsers')->controller(UsersController::class)->group(function(){
             Route::get('users','getUsers');
+            Route::get('getSanctions','getSanctions');
             Route::get('getIndex','getIndex');
             Route::get('getUserWor','getUserWorkpoint');
             Route::get('getPosition','getPosition');
@@ -219,13 +220,15 @@ Route::middleware('kraken')->group(function(){
         });
         Route::prefix('Products')->middleware('UseProducts')->controller(ProductController::class)->group(function(){
             Route::get('index','index');
-
             Route::get('getProduct/{product}','getProduct');
+            Route::post('editProduct','editProduct');
             Route::post('searchProd','searchProd');
-
+            Route::post('searchBarcode','searchBarcode');
+            Route::post('genBarcode','genBarcode');
         });
         Route::prefix('Assist')->middleware('UseAssist')->controller(AssistController::class)->group(function(){
             Route::get('index','index');
+            Route::get('getSanctions','getSanctions');
             Route::get('new','new');
             Route::get('getJustifications','getJustifications');
             Route::get('getReportWeek','getReportWeek');
@@ -233,6 +236,8 @@ Route::middleware('kraken')->group(function(){
             Route::get('ping/{d}','ping');
             Route::post('edit','edit');
             Route::post('addProceedings','addProceedings');
+            Route::post('addSanctions','addSanctions');
+            Route::post('addCommitment','addCommitment');
             Route::post('addDevice','addDevice');
             Route::post('changeStatus','changeStatus');
             Route::post('getFiltReport','getFiltReport');

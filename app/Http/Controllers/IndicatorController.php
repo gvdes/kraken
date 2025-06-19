@@ -705,8 +705,6 @@ class IndicatorController extends Controller
     //     return $userResponses;
     // }
 
-
-
     public function getCalculateClassUser(Request $request) {
         $colab = $request->all();
         $date = now()->format('Y-m-d');

@@ -492,7 +492,7 @@ class UsersController extends Controller
 
     public function getUserForStore(Request $request){
         $sid = $request->route('sid');
-        $users = User::with('store:id,name','rol.area','state','useStore','apps')->where([['_store',$sid],['_state','!=',4]])->get();
+        $users = User::with('store:id,name','rol.area','state','useStore','apps','sanctions.sanction','proceeding','commitment')->where([['_store',$sid],['_state','!=',4]])->get();
         $res = [
             "usuarios"=>$users
         ];

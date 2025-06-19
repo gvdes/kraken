@@ -14,6 +14,9 @@ use App\Models\Assist;
 use App\Models\Turn;
 use App\Models\Fecha;
 use App\Models\Proceeding;
+use App\Models\Sanction;
+use App\Models\Commitment;
+use App\Models\SanctionUser;
 use App\Models\ViewReportWeek;
 use App\Models\UserRol;
 use App\Models\ConfigWapi;
@@ -26,6 +29,15 @@ class AssistController extends Controller
     public function Index(){
         $devices = AssistDevice::with('store')->get();
         return response()->json($devices,200);
+    }
+
+    public function getSanctions(){
+        $users = User::with('store:id,name','rol.area','state','useStore','apps')->get();
+        $sanction = Sanction::all();
+        return response()->json([
+            "users"=>$users,
+            "sanction"=>$sanction
+        ],200);
     }
 
     public function ping($d){
@@ -749,4 +761,35 @@ class AssistController extends Controller
             }
     }
 
+    public function addSanctions(Request $request){
+        $inst = [
+            "_staff"=>$request->colab['id'],
+            "_created_by"=>$request->created_by,
+            "created_at"=>now(),
+            "_sanction"=>$request->sancion['id'],
+            "observation"=>$request->reason,
+            "mount"=>$request->mount
+        ];
+        $insert = SanctionUser::insert($inst);
+        if($insert){
+            return response()->json('Insertado Correctamente',200);
+        }else{
+            return response()->json('No se inserto Correctamente',500);
+        }
+    }
+
+    public function addCommitment(Request $request){
+        $getManage = User::where([['_store',$request->colab['store']['id']],['_rol',4],['_state','!=',4]])->first();
+        $getAdmon = User::where([['_store',$request->colab['store']['id']],['_rol',5],['_state','!=',4]])->first();
+        $insert = new Commitment;
+        $insert->_staff = $request->colab['id'];
+        $insert->_manager = $getManage->id;
+        $insert->_admin = $getAdmon->id;
+        $insert->_created_by = $request->created_by['id'];
+        $insert->reason = $request->reason;
+        $insert->created_at = now();
+        $insert->save();
+        $res = $insert->load(['staff.rol.area','created_by','manager','admin']);
+        return response()->json($res);
+    }
 }

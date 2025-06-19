@@ -32,4 +32,10 @@ class User extends Model
     public function turns(){ return $this->hasMany('App\Models\Turn','_user');}
 
     public function classification(){ return $this->hasOne('App\Models\UserClassification','_user');}
+
+    public function sanctions(){ return $this->hasMany('App\Models\SanctionUser',"_staff","id"); }
+
+    public function proceeding(){ return $this->hasMany('App\Models\Proceeding',"_user","id");}
+
+    public function commitment(){ return $this->hasMany('App\Models\Commitment',"_staff","id"); }
 }

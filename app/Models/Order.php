@@ -17,5 +17,11 @@ class Order extends Model
     public function bodie(){return $this->hasMany('\App\Models\OrderBodie','_order','id'); }
     public function cash(){return $this->belongsTo('\App\Models\CashRegister','_cash','id'); }
 
+    public function products(){
+        return $this->belongsToMany('\App\Models\Product', 'order_bodies', '_order', '_product')
+            ->using(OrderBodie::class)
+            ->withPivot('_order','_assorted_by','_product','amount_require','price','total','_rate','_state','notes','_order_by','deleted_at','_added_by','_supply_by','units');
+    }
+
 
 }

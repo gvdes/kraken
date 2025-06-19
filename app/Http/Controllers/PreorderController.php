@@ -9,6 +9,7 @@ use App\Models\Store;
 use App\Models\UnitMeassure;
 use App\Models\Warehouse;
 use App\Models\OrderLog;
+use App\Models\Product;
 use App\Models\OrderBodie;
 use App\Models\Seasons;
 use App\Models\SeassonBussinesRules;
@@ -78,20 +79,14 @@ class PreorderController extends Controller
         Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
 
         $order = Order::with([
-            'order.bodie.product.category.familia.seccion',
-            'order.bodie.product.measure',
-            'order.bodie.unitsupply',
-            'order.bodie.rates',
-            'order.bodie.product.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
-            'order.bodie.product.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
+            'products.category.familia.seccion',
+            'products.measure',
+            'products.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
+            'products.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
             'user',
-            'bodie.product.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
-            'bodie.product.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
             'client.rate',
-            'bodie.product.measure',
-            'bodie.product.category.familia.seccion',
-            'bodie.unitsupply',
-            'bodie.rates'])->where([['id',$id],['_store',$store]])->first();
+            ])->where([['id',$id],['_store',$store]])->first();
+        $order->products->each(function ($product) {$product->pivot->load(['unitsupply', 'rates']);});
         $units = UnitMeassure::all();
         $rules = Seasons::with('rules')->get();
         if($order){
@@ -204,21 +199,24 @@ class PreorderController extends Controller
     }
 
     public function addProduct(Request $request){
-        $order = OrderBodie::create($request->all());
+        $bodie = $request->all();
+        unset($bodie['supply_by']);
+        $order = OrderBodie::create($bodie);
         $store = $request->route('sid');
-        $suc = Store::find($store); // obtiene la sucursal
+        $suc = Store::find($store);
         $onWrhs = $request->query('warehouses') ?
         explode(",",$request->query('warehouses')) :
         Warehouse::select("id")->where("_store",$store)->get()->map( fn($r) => $r->id );
         if($order){
-            $bodie = OrderBodie::with([
-                'product.stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
-                'product.prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
-                'product.measure',
-                'product.category.familia.seccion',
-                'unitsupply',
-                'rates'])->where([['_product',$request->_product],['_order',$request->_order]])->first();
-            return $bodie;
+            $product = Product::with([
+                'stocks' => fn($q) => $q->with("warehouse")->whereIn("_warehouse", $onWrhs),
+                'prices' => fn($q) => $q->with(['rates'])->where('_type',$suc->_price_type),
+                'measure',
+                'category.familia.seccion',
+                'pivot' => fn($q) =>  $q->where('_order',$bodie['_order']),
+                'pivot.unitsupply', 'pivot.rates'
+            ])->where('id',$bodie['_product'])->first();
+            return $product;
         }else{
             return response()->json('No se pudo agregar el producto',401);
         }
