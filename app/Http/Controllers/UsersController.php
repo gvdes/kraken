@@ -190,7 +190,6 @@ class UsersController extends Controller
         }
     }
 
-
     public function getUserWorkpoint(){
 
         // $users = User::with('store','rol','rol.area')->whereHas('rol.area', function($q){

@@ -148,6 +148,7 @@ Route::middleware('kraken')->group(function(){
                 Route::get('index','index');
                 Route::get('/getTurnsWeek', 'getTurnsWeek');
                 Route::get('getReportWeek','getReportWeek');
+                Route::get('getSanctions','getSanctions');
                 Route::get('/pingStore/{d}','pingStore')->where(['d' => '[0-9]+']);;
                 Route::post('/addTurnsWeek', 'addTurnsWeek');
                 Route::post('/deleteTurnUser', 'deleteTurnUser');
@@ -155,6 +156,8 @@ Route::middleware('kraken')->group(function(){
                 Route::post('/addForm', 'addForm');
                 Route::post('getReportUserWeek','getReportUserWeek');
                 Route::post('getReportUserWeekFilt','getReportUserWeekFilt');
+                Route::post('addSanctions','addSanctions');
+                Route::post('addCommitment','addCommitment');
                 Route::post('getRegisDevice/{d}','getRegisDeviceStore');
                 Route::post('changeDate/{d}','changeDateStore');
             });
@@ -228,7 +231,7 @@ Route::middleware('kraken')->group(function(){
         });
         Route::prefix('Assist')->middleware('UseAssist')->controller(AssistController::class)->group(function(){
             Route::get('index','index');
-            Route::get('getSanctions','getSanctions');
+            // Route::get('getSanctions','getSanctions');
             Route::get('new','new');
             Route::get('getJustifications','getJustifications');
             Route::get('getReportWeek','getReportWeek');
@@ -236,8 +239,8 @@ Route::middleware('kraken')->group(function(){
             Route::get('ping/{d}','ping');
             Route::post('edit','edit');
             Route::post('addProceedings','addProceedings');
-            Route::post('addSanctions','addSanctions');
-            Route::post('addCommitment','addCommitment');
+            // Route::post('addSanctions','addSanctions');
+            // Route::post('addCommitment','addCommitment');
             Route::post('addDevice','addDevice');
             Route::post('changeStatus','changeStatus');
             Route::post('getFiltReport','getFiltReport');

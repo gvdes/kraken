@@ -31,8 +31,9 @@ class AssistController extends Controller
         return response()->json($devices,200);
     }
 
-    public function getSanctions(){
-        $users = User::with('store:id,name','rol.area','state','useStore','apps')->get();
+    public function getSanctions(Request $request){
+        $sid = $request->route('sid');
+        $users = User::with('store:id,name','rol.area','state','useStore','apps')->where([['_store',$sid],['_state','!=',4]])->get();
         $sanction = Sanction::all();
         return response()->json([
             "users"=>$users,
