@@ -420,7 +420,9 @@ class AssistController extends Controller
         $date = now()->format('Y-m-d');
         $fechas = Fecha::select('*',
         DB::raw(' WEEK((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY), 7) AS week'),
-        DB::raw(' YEAR(fecha) AS anio')
+        // DB::raw(' YEAR(fecha) AS anio')
+        DB::raw('YEAR((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY)) AS anio')
+
         )->orderBy('fecha','ASC')->get();
 
         $filtradas = $fechas->filter(fn($item) => $item->fecha == $date);
@@ -445,7 +447,9 @@ class AssistController extends Controller
         $date = now()->format('Y-m-d');
         $fechas = Fecha::select('*',
         DB::raw(' WEEK((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY), 7) AS week'),
-        DB::raw(' YEAR(fecha) AS anio')
+        // DB::raw(' YEAR(fecha) AS anio')
+        DB::raw('YEAR((fecha - INTERVAL (DAYOFWEEK(fecha) % 7) DAY)) AS anio')
+
         )->orderBy('fecha','ASC')->get();
 
         $filtradas = $fechas->filter(fn($item) => $item->fecha == $date);
